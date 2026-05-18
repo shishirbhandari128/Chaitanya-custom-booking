@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_booking_receipt" model="ir.actions.report">
+        <field name="name">Booking Receipt</field>
+        <field name="model">chaitanya.appointment.booking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">chaitanya_booking_flow.report_booking_receipt</field>
+        <field name="report_file">chaitanya_booking_flow.report_booking_receipt</field>
+        <field name="print_report_name">'Booking Summary - %s' % (object.name)</field>
+    </record>
+    <template id="report_booking_receipt">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="booking">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Booking Summary</h2>
+                        <p><strong>Reference:</strong> <span t-out="booking.name"/></p>
+                        <table class="table table-sm">
+                            <tr><td><strong>Service</strong></td><td t-out="booking.service_id.name"/></tr>
+                            <tr><td><strong>Therapist</strong></td><td t-out="booking.provider_id.name"/></tr>
+                            <tr><td><strong>Date and Time</strong></td><td t-out="booking.start_datetime"/></tr>
+                            <tr><td><strong>Customer</strong></td><td><span t-out="booking.customer_name"/> / <span t-out="booking.customer_email"/></td></tr>
+                            <tr><td><strong>Payment</strong></td><td><span t-out="booking.payment_method"/> / <span t-out="booking.payment_status"/></td></tr>
+                            <tr><td><strong>Total</strong></td><td><span t-out="booking.currency_id.symbol"/> <span t-out="booking.final_amount"/></td></tr>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

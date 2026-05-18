@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_chaitanya_working_day_list" model="ir.ui.view">
+        <field name="name">chaitanya.appointment.working_day.list</field>
+        <field name="model">chaitanya.appointment.working_day</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="provider_id"/>
+                <field name="date"/>
+                <field name="start_hour"/>
+                <field name="end_hour"/>
+                <field name="slot_interval"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_chaitanya_working_day_form" model="ir.ui.view">
+        <field name="name">chaitanya.appointment.working_day.form</field>
+        <field name="model">chaitanya.appointment.working_day</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name" readonly="1"/>
+                        <field name="provider_id"/>
+                        <field name="date"/>
+                        <field name="start_hour"/>
+                        <field name="end_hour"/>
+                        <field name="slot_interval"/>
+                        <field name="start"/>
+                        <field name="end"/>
+                        <field name="stop"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_chaitanya_working_day" model="ir.actions.act_window">
+        <field name="name">Therapist Availability</field>
+        <field name="res_model">chaitanya.appointment.working_day</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
+
