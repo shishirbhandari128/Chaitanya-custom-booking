@@ -20,6 +20,9 @@
         <field name="model">chaitanya.appointment.service</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_ensure_checkout_product" string="Create/Sync Checkout Product" type="object"/>
+                </header>
                 <sheet>
                     <group>
                         <group>
@@ -29,7 +32,7 @@
                             <field name="short_description"/>
                             <field name="duration"/>
                             <field name="price"/>
-                            <field name="product_id"/>
+                            <field name="product_id" readonly="1"/>
                             <field name="currency_id"/>
                             <field name="allow_gift"/>
                             <field name="website_published"/>

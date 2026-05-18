@@ -169,6 +169,8 @@ class ChaitanyaAppointmentController(http.Controller):
             return self._booking_error("The selected service is not available.")
         if not provider.exists() or provider not in service.provider_ids.filtered("active"):
             return self._booking_error("The selected therapist is not available for this service.")
+        
+        service._ensure_checkout_product()
         if not service.product_id:
             return self._booking_error("This service is not linked to a checkout product yet.")
 

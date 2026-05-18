@@ -9,10 +9,12 @@
         "base",
         "mail",
         "portal",
+        "sale",
         "sale_management",
         "website",
         "website_sale",
     ],
+    
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
