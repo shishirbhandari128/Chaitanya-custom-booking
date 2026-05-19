@@ -37,6 +37,8 @@
                             <field name="allow_gift"/>
                             <field name="website_published"/>
                             <field name="active"/>
+                            <!-- <field name="public_categ_ids" widget="many2many_tags"/> -->
+
                         </group>
                         <group>
                             <field name="image" widget="image"/>

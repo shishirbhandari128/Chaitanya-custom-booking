@@ -6,3 +6,5 @@ from . import voucher
 from . import booking
 from . import sale_order
 from . import compatibility
+from . import product_template
+

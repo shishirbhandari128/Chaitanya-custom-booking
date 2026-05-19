@@ -28,6 +28,7 @@
         "views/compatibility_views.xml",
         "views/menu_views.xml",
         "views/website_templates.xml",
+        "views/website_sale_inherit.xml",
         "reports/booking_receipt_report.xml",
     ],
     "application": True,

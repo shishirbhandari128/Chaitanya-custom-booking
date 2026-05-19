@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Booking buttons: only for booking service products -->
+    <record id="product_booking_buttons" model="ir.ui.view">
+        <field name="name">product.booking.buttons</field>
+        <field name="inherit_id" ref="website_sale.product"/>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+
+            <!-- Insert booking buttons before default add-to-cart block -->
+            <xpath expr="//div[@id='add_to_cart_wrap']" position="before">
+                <t t-if="product.is_booking_service and product.appointment_service_id">
+                    <div id="booking_actions_wrap"
+                         class="d-flex align-items-center mb-2 me-auto gap-2">
+
+                        <a role="button"
+                           id="custom_book_now_button"
+                           class="btn btn-primary"
+                           t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=0">
+                            Book Now
+                        </a>
+
+                        <t t-if="product.allow_gift">
+                            <a role="button"
+                               id="gift_now_button"
+                               class="btn btn-outline-primary"
+                               t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=1">
+                                <i class="fa fa-gift me-1"/>
+                                Gift Now
+                            </a>
+                        </t>
+
+                    </div>
+                </t>
+            </xpath>
+
+            <!-- Keep default Add to Cart only for normal products -->
+            <xpath expr="//div[@id='add_to_cart_wrap']" position="attributes">
+                <attribute name="t-if">not product.is_booking_service</attribute>
+            </xpath>
+
+        </field>
+    </record>
+
+
+    <!-- Hide quantity counter for booking service products -->
+    <record id="hide_booking_product_quantity_counter" model="ir.ui.view">
+        <field name="name">hide.booking.product.quantity.counter</field>
+        <field name="inherit_id" ref="website_sale.product_quantity"/>
+        <field name="priority">999</field>
+        <field name="arch" type="xml">
+
+            <xpath expr="//div[input[@name='add_qty']]" position="attributes">
+                <attribute name="t-if">not product.is_booking_service</attribute>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

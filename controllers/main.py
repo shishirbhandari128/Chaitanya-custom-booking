@@ -4,12 +4,37 @@ from datetime import timedelta
 from odoo import fields, http
 from odoo.http import request
 
+from odoo import http
+from odoo.addons.website_sale.controllers.main import WebsiteSale
+from odoo.http import request
+
+
+class ChaitanyaWebsiteSale(WebsiteSale):
+
+    @http.route([
+        '/service',
+        '/service/page/<int:page>',
+        '/service/category/<model("product.public.category"):category>',
+    ], type='http', auth="public", website=True)
+    
+    def service_shop(self, page=0, category=None, search='', **kwargs):
+
+        return super().shop(
+            page=page,
+            category=category,
+            search=search,
+            **kwargs
+        )
+
 
 class ChaitanyaAppointmentController(http.Controller):
     def _booking_error(self, message):
         return request.render("chaitanya_booking_flow.booking_error_page", {"message": message})
 
-    @http.route(["/services", "/chaitanya/services"], type="http", auth="public", website=True, sitemap=True)
+    
+
+
+    @http.route(["/chaitanya/services"], type="http", auth="public", website=True, sitemap=True)
     def services_page(self, category=None, category_id=None, **kwargs):
         selected_category_id = category or category_id
         Category = request.env["chaitanya.appointment.service.category"].sudo()
@@ -33,7 +58,7 @@ class ChaitanyaAppointmentController(http.Controller):
         )
 
     @http.route(
-        ["/services/<int:service_id>", "/chaitanya/service/<int:service_id>"],
+        ["/chaitanya/service/<int:service_id>"],
         type="http",
         auth="public",
         website=True,
