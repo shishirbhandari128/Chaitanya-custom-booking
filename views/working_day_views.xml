@@ -1,46 +1,199 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_chaitanya_working_day_list" model="ir.ui.view">
-        <field name="name">chaitanya.appointment.working_day.list</field>
-        <field name="model">chaitanya.appointment.working_day</field>
+
+    <!-- ===================================================== -->
+    <!-- SCHEDULE TEMPLATE -->
+    <!-- ===================================================== -->
+
+    <record id="view_schedule_template_tree" model="ir.ui.view">
+        <field name="name">schedule.template.tree</field>
+        <field name="model">chaitanya.appointment.schedule.template</field>
+
         <field name="arch" type="xml">
             <list>
-                <field name="name"/>
                 <field name="provider_id"/>
-                <field name="date"/>
-                <field name="start_hour"/>
-                <field name="end_hour"/>
-                <field name="slot_interval"/>
-                <field name="active"/>
+                <field name="active"/>      
             </list>
         </field>
     </record>
-    <record id="view_chaitanya_working_day_form" model="ir.ui.view">
-        <field name="name">chaitanya.appointment.working_day.form</field>
-        <field name="model">chaitanya.appointment.working_day</field>
+
+
+    <record id="view_schedule_template_form" model="ir.ui.view">
+        <field name="name">schedule.template.form</field>
+
+        <field name="model">chaitanya.appointment.schedule.template</field>
+
         <field name="arch" type="xml">
+
             <form>
                 <sheet>
+
                     <group>
-                        <field name="name" readonly="1"/>
                         <field name="provider_id"/>
-                        <field name="date"/>
-                        <field name="start_hour"/>
-                        <field name="end_hour"/>
-                        <field name="slot_interval"/>
-                        <field name="start"/>
-                        <field name="end"/>
-                        <field name="stop"/>
                         <field name="active"/>
                     </group>
+
+                    <notebook>
+
+                        <page string="Schedule Dates">
+
+                            <field name="date_ids">
+                                <list>
+                                    <field name="date"/>
+                                    <field name = "slot_ids"/>
+                                </list>
+                                <form>
+                                    <sheet>
+                                        <group>
+                                            <field name="date"/>
+                                        </group>
+                                        <field name="slot_ids">
+                                            <list editable="bottom">
+                                                <field name="is_off"/>
+
+                                                <field name="start_hour"/>
+                                                <field name="end_hour"/>
+                                                <field name="slot_interval"/>
+                                            </list>
+                                        </field>
+                                    </sheet>
+                                </form>
+                            </field>
+
+
+                        </page>
+
+                    </notebook>
+
                 </sheet>
             </form>
+
         </field>
     </record>
-    <record id="action_chaitanya_working_day" model="ir.actions.act_window">
-        <field name="name">Therapist Availability</field>
-        <field name="res_model">chaitanya.appointment.working_day</field>
+
+
+    <record id="action_schedule_template" model="ir.actions.act_window">
+        <field name="name">Schedules</field>
+
+        <field name="res_model">chaitanya.appointment.schedule.template</field>
+
         <field name="view_mode">list,form</field>
     </record>
-</odoo>
 
+
+    <!-- ===================================================== -->
+    <!-- OVERRIDE -->
+    <!-- ===================================================== -->
+
+    <!-- <record id="view_schedule_override_tree" model="ir.ui.view">
+
+        <field name="name">schedule.override.tree</field>
+
+        <field name="model">chaitanya.appointment.schedule.override</field>
+
+        <field name="arch" type="xml">
+
+            <list>
+                <field name="provider_id"/>
+                <field name="date"/>
+                <field name="is_off"/>
+            </list>
+
+        </field>
+
+    </record>
+
+
+    <record id="view_schedule_override_form" model="ir.ui.view">
+
+        <field name="name">schedule.override.form</field>
+
+        <field name="model">chaitanya.appointment.schedule.override</field>
+
+        <field name="arch" type="xml">
+
+            <form>
+
+                <sheet>
+
+                    <group>
+
+                        <field name="provider_id"/>
+
+                        <field name="schedule_date_id"/>
+
+                        <field name="date" readonly="1"/>
+
+                        <field name="is_off"/>
+
+                    </group>
+
+                    <notebook>
+
+                      
+
+                        <page string="Existing Slots">
+
+                            <field name="existing_slot_ids" readonly="1">
+
+                                <list>
+                                    <field name="start_hour"/>
+                                    <field name="end_hour"/>
+                                    <field name="slot_interval"/>
+                                </list>
+
+                            </field>
+
+                        </page>
+
+
+                      <page string="New Slots">
+
+                            <field name="new_slot_ids">
+
+                                <list editable="bottom">
+
+                                    <field name="start_hour"/>
+                                    <field name="end_hour"/>
+                                    <field name="slot_interval"/>
+
+                                </list>
+
+                            </field>
+
+                        </page>
+
+                    </notebook>
+
+
+                    <footer>
+
+                        <button
+                            name="action_apply_override"
+                            type="object"
+                            string="Apply Override"
+                            class="btn-primary"
+                        />
+
+                    </footer>
+
+                </sheet>
+
+            </form>
+
+        </field>
+
+    </record>
+
+
+    <record id="action_schedule_override" model="ir.actions.act_window">
+
+        <field name="name">Schedule Overrides</field>
+
+        <field name="res_model">chaitanya.appointment.schedule.override</field>
+
+        <field name="view_mode">list,form</field>
+
+    </record> -->
+
+</odoo>

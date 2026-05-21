@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <!-- ===================================================== -->
+    <!-- PROVIDER LIST VIEW -->
+    <!-- ===================================================== -->
+
     <record id="view_chaitanya_provider_list" model="ir.ui.view">
         <field name="name">chaitanya.appointment.provider.list</field>
         <field name="model">chaitanya.appointment.provider</field>
@@ -14,6 +19,11 @@
             </list>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- PROVIDER FORM VIEW -->
+    <!-- ===================================================== -->
+
     <record id="view_chaitanya_provider_form" model="ir.ui.view">
         <field name="name">chaitanya.appointment.provider.form</field>
         <field name="model">chaitanya.appointment.provider</field>
@@ -34,29 +44,153 @@
                             <field name="image" widget="image"/>
                         </group>
                     </group>
+
                     <notebook>
+                        <!-- SERVICES TAB -->
                         <page string="Services">
                             <field name="service_ids" widget="many2many_tags"/>
                         </page>
-                        <page string="Availability">
-                            <field name="available_slot_ids"/>
+
+                        <!-- SCHEDULE TAB -->
+                        <page string="Schedule">
+                            <notebook>
+
+                                <!-- WEEKLY SCHEDULE -->
+                                <page string="Schedules">
+                                    <field name="weekly_template_ids">
+                                        <list>
+                                            <field name="active"/>
+                                            <field name="date_ids"/>
+                                        </list>
+
+                                        <form>
+                                            <sheet>
+                                                <group>
+                                                    <field name="active"/>
+
+                                                </group>
+
+                                                <notebook>
+                                                    <!-- DATES -->
+                                                    <page string="Dates">
+                                                        <field name="date_ids">
+                                                            <list>
+                                                                <field name="date"/>
+                                                            </list>
+
+                                                            <form>
+                                                                <sheet>
+                                                                    <group>
+                                                                        <field name="date"/>
+                                                                    </group>
+
+                                                                    <notebook>
+                                                                        <!-- SLOTS -->
+                                                                        <page string="Slots">
+                                                                            <field name="slot_ids">
+                                                                                <list editable="bottom">
+                                                                                    <field name="is_off"/>
+                                                                                    <field name="start_hour"/>
+                                                                                    <field name="end_hour"/>
+                                                                                    <field name="slot_interval"/>
+                                                                                </list>
+                                                                            </field>
+                                                                        </page>
+                                                                    </notebook>
+                                                                </sheet>
+                                                            </form>
+                                                        </field>
+                                                    </page>
+                                                </notebook>
+                                            </sheet>
+                                        </form>
+                                    </field>
+                                </page>
+
+                                <!-- ================================================= -->
+                                <!-- OVERRIDES (COMMENTED OUT) -->
+                                <!-- ================================================= -->
+                                <!--
+                                <page string="Overrides">
+                                    <field name="override_ids">
+                                        <list>
+                                            <field name="date"/>
+                                            <field name="is_off"/>
+                                        </list>
+
+                                        <form>
+                                            <sheet>
+                                                <group>
+                                                    <field name="provider_id"/>
+                                                    <field name="schedule_date_id"/>
+                                                    <field name="date" readonly="1"/>
+                                                    <field name="is_off"/>
+                                                </group>
+
+                                                <notebook>
+                                                    <page string="Existing Slots">
+                                                        <field name="existing_slot_ids" readonly="1">
+                                                            <list>
+                                                                <field name="start_hour"/>
+                                                                <field name="end_hour"/>
+                                                                <field name="slot_interval"/>
+                                                            </list>
+                                                        </field>
+                                                    </page>
+
+                                                    <page string="New Slots">
+                                                        <field name="new_slot_ids">
+                                                            <list editable="bottom">
+                                                                <field name="start_hour"/>
+                                                                <field name="end_hour"/>
+                                                                <field name="slot_interval"/>
+                                                            </list>
+                                                        </field>
+                                                    </page>
+                                                </notebook>
+
+                                                <footer>
+                                                    <button
+                                                        name="action_apply_override"
+                                                        type="object"
+                                                        string="Apply Override"
+                                                        class="btn-primary"
+                                                    />
+                                                </footer>
+                                            </sheet>
+                                        </form>
+                                    </field>
+                                </page>
+                                -->
+
+                            </notebook>
                         </page>
+
+                        <!-- BIO TAB -->
                         <page string="Bio">
                             <field name="bio"/>
                         </page>
+
+                        <!-- DESCRIPTION TAB -->
                         <page string="Description">
                             <field name="description"/>
                         </page>
                     </notebook>
                 </sheet>
+
                 <chatter/>
             </form>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- ACTION -->
+    <!-- ===================================================== -->
+
     <record id="action_chaitanya_provider" model="ir.actions.act_window">
         <field name="name">Therapists</field>
         <field name="res_model">chaitanya.appointment.provider</field>
         <field name="view_mode">list,form</field>
     </record>
-</odoo>
 
+</odoo>

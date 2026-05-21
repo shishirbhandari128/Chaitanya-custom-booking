@@ -1,12 +1,8 @@
-import json
-from datetime import timedelta
-
 from odoo import fields, http
 from odoo.http import request
-
-from odoo import http
 from odoo.addons.website_sale.controllers.main import WebsiteSale
-from odoo.http import request
+from datetime import datetime, timedelta, time
+import pytz
 
 
 class ChaitanyaWebsiteSale(WebsiteSale):
@@ -34,42 +30,42 @@ class ChaitanyaAppointmentController(http.Controller):
     
 
 
-    @http.route(["/chaitanya/services"], type="http", auth="public", website=True, sitemap=True)
-    def services_page(self, category=None, category_id=None, **kwargs):
-        selected_category_id = category or category_id
-        Category = request.env["chaitanya.appointment.service.category"].sudo()
-        Service = request.env["chaitanya.appointment.service"].sudo()
-        categories = Category.search([("active", "=", True), ("website_published", "=", True)])
-        domain = [("active", "=", True), ("website_published", "=", True)]
-        selected_category = False
-        if selected_category_id:
-            selected_category = Category.browse(int(selected_category_id))
-            if selected_category.exists():
-                domain.append(("category_id", "=", selected_category.id))
-        services = Service.search(domain, order="category_id, sequence, name")
-        return request.render(
-            "chaitanya_booking_flow.services_page",
-            {
-                "categories": categories,
-                "services": services,
-                "selected_category": selected_category,
-                "active_category_id": selected_category.id if selected_category else False,
-            },
-        )
+    # @http.route(["/chaitanya/services"], type="http", auth="public", website=True, sitemap=True)
+    # def services_page(self, category=None, category_id=None, **kwargs):
+    #     selected_category_id = category or category_id
+    #     Category = request.env["chaitanya.appointment.service.category"].sudo()
+    #     Service = request.env["chaitanya.appointment.service"].sudo()
+    #     categories = Category.search([("active", "=", True), ("website_published", "=", True)])
+    #     domain = [("active", "=", True), ("website_published", "=", True)]
+    #     selected_category = False
+    #     if selected_category_id:
+    #         selected_category = Category.browse(int(selected_category_id))
+    #         if selected_category.exists():
+    #             domain.append(("category_id", "=", selected_category.id))
+    #     services = Service.search(domain, order="category_id, sequence, name")
+    #     return request.render(
+    #         "chaitanya_booking_flow.services_page",
+    #         {
+    #             "categories": categories,
+    #             "services": services,
+    #             "selected_category": selected_category,
+    #             "active_category_id": selected_category.id if selected_category else False,
+    #         },
+    #     )
 
-    @http.route(
-        ["/chaitanya/service/<int:service_id>"],
-        type="http",
-        auth="public",
-        website=True,
-    )
-    def service_detail(self, service_id, **kwargs):
-        service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
-        if not service.exists() or not service.active or not service.website_published:
-            return request.not_found()
-        return request.render("chaitanya_booking_flow.service_detail_page", {"service": service})
+    # @http.route(
+    #     ["/chaitanya/service/<int:service_id>"],
+    #     type="http",
+    #     auth="public",
+    #     website=True,
+    # )
+    # def service_detail(self, service_id, **kwargs):
+    #     service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
+    #     if not service.exists() or not service.active or not service.website_published:
+    #         return request.not_found()
+    #     return request.render("chaitanya_booking_flow.service_detail_page", {"service": service})
 
-    @http.route("/booking/start/<int:service_id>", type="http", auth="public", website=True)
+    @http.route("/booking/start/<int:service_id>", type="http", auth="public", website=True, page=True)
     def booking_start(self, service_id, gift="0", **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
         if not service.exists() or not service.active or not service.website_published:
@@ -82,73 +78,165 @@ class ChaitanyaAppointmentController(http.Controller):
             {"service": service, "is_gift": is_gift},
         )
 
+    def _booking_timezone(self):
+        tz_name = (
+            request.env.context.get("tz")
+            or request.env.user.tz
+            or request.website.user_id.tz
+            or "Asia/Kathmandu"
+        )
+        return pytz.timezone(tz_name)
+
+
+    def _now_local(self):
+        tz = self._booking_timezone()
+        return fields.Datetime.now().replace(tzinfo=pytz.utc).astimezone(tz)
+
+
+    def _float_to_local_datetime(self, date_value, hour):
+        if isinstance(date_value, str):
+            date_value = fields.Date.from_string(date_value)
+
+        hours = int(hour)
+        minutes = int(round((hour - hours) * 60))
+
+        naive_dt = datetime.combine(date_value, time(hour=hours, minute=minutes))
+        return self._booking_timezone().localize(naive_dt)
+
+
+    def _local_datetime_to_utc_string(self, local_dt):
+        utc_dt = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
+        return fields.Datetime.to_string(utc_dt)
+
+
+    def _get_provider_slots(self, service, provider, date_value):
+        slots = []
+        now_local = self._now_local()
+
+        if isinstance(date_value, str):
+            date_value = fields.Date.from_string(date_value)
+
+        templates = provider.weekly_template_ids.filtered(lambda t: t.active)
+
+        for template in templates:
+            schedule_dates = template.date_ids.filtered(lambda d: d.date == date_value)
+
+            for schedule_date in schedule_dates:
+                for slot in schedule_date.slot_ids:
+                    if slot.is_off:
+                        continue
+
+                    current = self._float_to_local_datetime(schedule_date.date, slot.start_hour)
+                    end_dt = self._float_to_local_datetime(schedule_date.date, slot.end_hour)
+
+                    while current + timedelta(minutes=service.duration) <= end_dt:
+                        start_utc = fields.Datetime.from_string(self._local_datetime_to_utc_string(current))
+
+                        if (
+                            current > now_local
+                            and request.env["chaitanya.appointment.booking"].sudo()._is_slot_available(
+                                service,
+                                provider,
+                                start_utc,
+                            )
+                        ):
+                            slots.append({
+                                "value": self._local_datetime_to_utc_string(current),
+                                "label": current.strftime("%I:%M %p"),
+                            })
+
+                        current += timedelta(minutes=slot.slot_interval or 30)
+
+        return sorted(slots, key=lambda s: s["value"])
+
+
+    def _provider_card(self, service, provider, date_value=False):
+        all_slots = []
+
+        if date_value:
+            all_slots = self._get_provider_slots(service, provider, date_value)
+        else:
+            today = fields.Date.context_today(request.env.user)
+
+            schedule_dates = provider.weekly_template_ids.filtered(
+                lambda t: t.active
+            ).mapped("date_ids")
+
+            schedule_dates = schedule_dates.filtered(lambda d: d.date >= today)
+
+            for schedule_date in sorted(schedule_dates, key=lambda d: d.date):
+                all_slots = self._get_provider_slots(service, provider, schedule_date.date)
+                if all_slots:
+                    break
+
+        if not all_slots:
+            return False
+
+        nearest = all_slots[0]
+
+        return {
+            "id": provider.id,
+            "name": provider.name,
+            "specialization": provider.specialization or "",
+            "image_url": "/web/image/chaitanya.appointment.provider/%s/image" % provider.id,
+            "nearest_time": nearest["label"],
+            "nearest_date": nearest["value"][:10],
+            "slots": all_slots,
+        }
+
     @http.route("/booking/select/<int:service_id>/<string:method>", type="http", auth="public", website=True)
     def booking_select(self, service_id, method, gift="0", **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
+
         if method not in ("therapist", "availability"):
             return request.not_found()
+
         if not service.exists() or not service.active or not service.website_published:
             return request.not_found()
+
         is_gift = gift in ("1", "true", "True")
-        if is_gift and not service.allow_gift:
-            return request.not_found()
-        return request.render(
-            "chaitanya_booking_flow.booking_select_page",
-            {"service": service, "booking_method": method, "is_gift": is_gift},
-        )
 
-    def _provider_payload(self, providers):
-        return [
-            {"id": provider.id, "name": provider.name, "specialization": provider.specialization or ""}
-            for provider in providers
-        ]
+        return request.render("chaitanya_booking_flow.booking_select_page", {
+            "service": service,
+            "booking_method": method,
+            "is_gift": is_gift,
+        })
 
-    @http.route("/booking/get_service_therapists", type="json", auth="public", website=True)
-    def get_service_therapists(self, service_id, **kwargs):
+    @http.route("/booking/get_therapist_cards", type="json", auth="public", website=True)
+    def get_therapist_cards(self, service_id, date=False, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
-        if not service.exists() or not service.active or not service.website_published:
-            return []
-        return self._provider_payload(service.provider_ids.filtered("active"))
 
-    @http.route(["/booking/get_available_therapists", "/booking/get_therapists"], type="json", auth="public", website=True)
-    def get_available_therapists(self, service_id, date=None, **kwargs):
+        if not service.exists():
+            return []
+
+        date_value = fields.Date.from_string(date) if date else False
+        providers = service.provider_ids.filtered(lambda p: p.active and p.is_active_for_booking)
+
+        cards = []
+        for provider in providers:
+            card = self._provider_card(service, provider, date_value)
+            if card:
+                cards.append(card)
+
+        return sorted(cards, key=lambda c: (c["nearest_date"], c["nearest_time"], c["name"].lower()))
+
+    @http.route("/booking/get_provider_dates", type="json", auth="public", website=True)
+    def get_provider_dates(self, service_id, provider_id, **kwargs):
+        provider = request.env["chaitanya.appointment.provider"].sudo().browse(int(provider_id))
+        dates = provider.weekly_template_ids.filtered(lambda t: t.active).mapped("date_ids")
+        dates = dates.filtered(lambda d: d.date >= fields.Date.today())
+
+        return sorted(set(fields.Date.to_string(d.date) for d in dates))
+
+    @http.route("/booking/get_provider_slots", type="json", auth="public", website=True)
+    def get_provider_slots(self, service_id, provider_id, date, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
-        if not service.exists() or not service.active or not service.website_published:
-            return []
-        providers = service.provider_ids.filtered("active")
-        if date:
-            booking_model = request.env["chaitanya.appointment.booking"].sudo()
-            providers = providers.filtered(
-                lambda provider: bool(booking_model.get_available_slots(service.id, date, provider.id))
-            )
-        return self._provider_payload(providers)
+        provider = request.env["chaitanya.appointment.provider"].sudo().browse(int(provider_id))
+        date_value = fields.Date.from_string(date)
 
-    @http.route("/booking/get_available_slots", type="json", auth="public", website=True)
-    def get_available_slots(self, service_id, therapist_id=None, provider_id=None, date=None, **kwargs):
-        provider_id = provider_id or therapist_id
-        service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
-        if not service.exists() or not service.active or not service.website_published:
-            return []
-        slots = request.env["chaitanya.appointment.booking"].sudo().get_available_slots(
-            service.id,
-            date,
-            int(provider_id) if provider_id else None,
-        )
-        return slots
+        return self._get_provider_slots(service, provider, date_value)
 
-    @http.route("/booking/get_available_dates", type="json", auth="public", website=True)
-    def get_available_dates(self, service_id, therapist_id=None, provider_id=None, **kwargs):
-        provider_id = provider_id or therapist_id
-        if not provider_id:
-            return []
-        service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
-        if not service.exists() or not service.active or not service.website_published:
-            return []
-        return request.env["chaitanya.appointment.booking"].sudo().get_available_dates(
-            service.id,
-            int(provider_id),
-        )
-
+    
     @http.route("/booking/validate_voucher", type="json", auth="public", website=True)
     def validate_voucher(self, service_id, code=None, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
@@ -163,22 +251,6 @@ class ChaitanyaAppointmentController(http.Controller):
         amounts = request.env["chaitanya.appointment.booking"].sudo().prepare_amounts(service, voucher, partner)
         return {"valid": True, **amounts}
 
-    @http.route("/chaitanya/api/slots", type="http", auth="public", methods=["GET"], csrf=False)
-    def api_slots(self, service_id, date, provider_id=None, **kwargs):
-        slots = request.env["chaitanya.appointment.booking"].sudo().get_available_slots(
-            int(service_id),
-            date,
-            int(provider_id) if provider_id else None,
-        )
-        return request.make_response(json.dumps({"slots": slots}), headers=[("Content-Type", "application/json")])
-
-    @http.route("/chaitanya/api/providers", type="http", auth="public", methods=["GET"], csrf=False)
-    def api_providers(self, service_id, start_datetime, **kwargs):
-        providers = request.env["chaitanya.appointment.booking"].sudo().get_available_providers(
-            int(service_id),
-            start_datetime,
-        )
-        return request.make_response(json.dumps({"providers": providers}), headers=[("Content-Type", "application/json")])
 
     @http.route("/booking/submit", type="http", auth="public", website=True, methods=["POST"], csrf=True)
     def submit_booking(self, **post):
@@ -275,3 +347,21 @@ class ChaitanyaAppointmentController(http.Controller):
                 ("Content-Disposition", 'attachment; filename="%s.pdf"' % booking.name),
             ],
         )
+
+
+    @http.route("/booking/cart/remove/<int:line_id>", type="http", auth="public", website=True)
+    def remove_cart_booking_line(self, line_id, **kwargs):
+        order = request.website.sale_get_order()
+        if not order:
+            return request.redirect("/shop/cart")
+
+        line = request.env["sale.order.line"].sudo().browse(line_id)
+
+        if line.exists() and line.order_id.id == order.id:
+            order._cart_update(
+                product_id=line.product_id.id,
+                line_id=line.id,
+                set_qty=0,
+            )
+
+        return request.redirect("/shop/cart")

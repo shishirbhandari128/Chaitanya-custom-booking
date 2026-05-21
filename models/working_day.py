@@ -2,45 +2,166 @@ from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
-class ChaitanyaAppointmentWorkingDay(models.Model):
-    _name = "chaitanya.appointment.working_day"
-    _description = "Therapist Availability"
-    _order = "date, start_hour"
 
-    name = fields.Char(compute="_compute_name", store=True)
+class ChaitanyaScheduleTemplate(models.Model):
+    _name = "chaitanya.appointment.schedule.template"
+    _description = "Therapist Schedule Template"
+
     provider_id = fields.Many2one(
         "chaitanya.appointment.provider",
-        string="Therapist",
         required=True,
-        ondelete="cascade",
+        ondelete="cascade"
     )
-    date = fields.Date(required=True, default=fields.Date.context_today)
-    start = fields.Datetime(string="Start")
-    end = fields.Datetime(string="End")
-    stop = fields.Datetime(string="Stop")
-    start_hour = fields.Float(required=True, default=10.0)
-    end_hour = fields.Float(required=True, default=18.0)
-    slot_interval = fields.Integer(string="Slot Interval (Minutes)", default=30, required=True)
+
     active = fields.Boolean(default=True)
 
-    @api.depends("provider_id", "date", "start_hour", "end_hour")
-    def _compute_name(self):
-        for availability in self:
-            provider = availability.provider_id.name or "Therapist"
-            availability.name = "%s - %s (%s-%s)" % (
-                provider,
-                availability.date or "",
-                availability.start_hour,
-                availability.end_hour,
-            )
+    date_ids = fields.One2many(
+        "chaitanya.appointment.schedule.date",
+        "template_id",
+        string="Schedule Dates"
+    )
 
-    @api.constrains("start_hour", "end_hour", "slot_interval")
-    def _check_time_range(self):
-        for availability in self:
-            if availability.start_hour < 0 or availability.end_hour > 24:
-                raise ValidationError("Availability hours must be between 0 and 24.")
-            if availability.start_hour >= availability.end_hour:
-                raise ValidationError("End time must be after start time.")
-            if availability.slot_interval <= 0:
-                raise ValidationError("Slot interval must be greater than zero.")
 
+
+
+class ChaitanyaScheduleDate(models.Model):
+    _name = "chaitanya.appointment.schedule.date"
+    _description = "Therapist Schedule Date"
+
+    template_id = fields.Many2one(
+        "chaitanya.appointment.schedule.template",
+        required=True,
+        ondelete="cascade"
+    )
+
+    date = fields.Date(required=True)
+
+    slot_ids = fields.One2many(
+        "chaitanya.appointment.schedule.slot",
+        "date_id",
+        string="Time Slots"
+    )
+
+
+class ChaitanyaScheduleSlot(models.Model):
+    _name = "chaitanya.appointment.schedule.slot"
+    _description = "Therapist Time Slots"
+    _order = "start_hour"
+
+    date_id = fields.Many2one(
+        "chaitanya.appointment.schedule.date",
+        required=True,
+        ondelete="cascade"
+    )
+
+    start_hour = fields.Float(required=True)
+    end_hour = fields.Float(required=True)
+    is_off = fields.Boolean(default=False)
+
+
+    slot_interval = fields.Integer(default=30)
+
+    @api.constrains("start_hour", "end_hour")
+    def _check_valid_time(self):
+        for rec in self:
+            if rec.start_hour >= rec.end_hour:
+                raise ValidationError(
+                    "Start time must be before end time."
+                )
+
+
+# =========================================================
+# OVERRIDE MODEL
+# =========================================================
+
+# class ChaitanyaScheduleOverride(models.Model):
+#     _name = "chaitanya.appointment.schedule.override"
+#     _description = "Therapist Schedule Override"
+
+#     provider_id = fields.Many2one(
+#         "chaitanya.appointment.provider",
+#         required=True,
+#         ondelete="cascade"
+#     )
+
+#     schedule_date_id = fields.Many2one(
+#         "chaitanya.appointment.schedule.date",
+#         string="Schedule Date",
+#         required=True
+#     )
+
+#     date = fields.Date(
+#         related="schedule_date_id.date",
+#         store=True
+#     )
+
+#     is_off = fields.Boolean(default=False)
+
+#     existing_slot_ids = fields.Many2many(
+#         "chaitanya.appointment.schedule.slot",
+#         string="Existing Slots",
+#         compute="_compute_existing_slots"
+#     )
+
+#     new_slot_ids = fields.One2many(
+#         "chaitanya.appointment.override.slot",
+#         "override_id",
+#         string="New Slots"
+#     )
+
+#     @api.depends("schedule_date_id")
+#     def _compute_existing_slots(self):
+#         for rec in self:
+#             rec.existing_slot_ids = rec.schedule_date_id.slot_ids
+
+#     def action_apply_override(self):
+
+#         for rec in self:
+
+#             slots = rec.schedule_date_id.slot_ids
+
+#             # REMOVE OLD SLOTS
+#             slots.unlink()
+
+#             # OFF DAY
+#             if rec.is_off:
+#                 continue
+
+#             # CREATE NEW SLOTS
+#             for slot in rec.new_slot_ids:
+#                 self.env[
+#                     "chaitanya.appointment.schedule.slot"
+#                 ].create({
+#                     "date_id": rec.schedule_date_id.id,
+#                     "start_hour": slot.start_hour,
+#                     "end_hour": slot.end_hour,
+#                     "slot_interval": slot.slot_interval,
+#                 })
+
+
+# =========================================================
+# OVERRIDE SLOT MODEL
+# =========================================================
+
+# class ChaitanyaScheduleOverrideSlot(models.Model):
+#     _name = "chaitanya.appointment.override.slot"
+#     _description = "Override Slots"
+
+#     override_id = fields.Many2one(
+#         "chaitanya.appointment.schedule.override",
+#         required=True,
+#         ondelete="cascade"
+#     )
+
+#     start_hour = fields.Float(required=True)
+#     end_hour = fields.Float(required=True)
+
+#     slot_interval = fields.Integer(default=30)
+
+#     @api.constrains("start_hour", "end_hour")
+#     def _check_valid_time(self):
+#         for rec in self:
+#             if rec.start_hour >= rec.end_hour:
+#                 raise ValidationError(
+#                     "Start time must be before end time."
+#                 )

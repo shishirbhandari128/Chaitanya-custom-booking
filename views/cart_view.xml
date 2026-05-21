@@ -1,0 +1,29 @@
+<odoo>
+    <template id="cart_booking_delete_button"
+              inherit_id="website_sale.cart_lines"
+              name="Cart Booking Delete Button">
+
+        <!-- Replace desktop Remove text with trash icon -->
+        <xpath expr="//div[@name='o_wsale_cart_line_button_container']/a[contains(@class, 'js_delete_product')]"
+               position="replace">
+            <a href="#"
+               class="js_delete_product ch-cart-delete-icon"
+               title="Remove from cart"
+               aria-label="Remove from cart">
+                <i class="fa fa-trash-o"/>
+            </a>
+        </xpath>
+
+        <!-- Replace mobile delete button too -->
+        <!-- <xpath expr="//div[@name='o_wsale_cart_line_button_container']/button[contains(@class, 'js_delete_product')]"
+               position="replace">
+            <a href="#"
+               class="js_delete_product ch-cart-delete-icon"
+               title="Remove from cart"
+               aria-label="Remove from cart">
+                <i class="fa fa-trash-o"/>
+            </a>
+        </xpath> -->
+
+    </template>
+</odoo>

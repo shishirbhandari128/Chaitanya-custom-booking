@@ -1,10 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_chaitanya_booking_root" name="Chaitanya Booking Flow" sequence="35"/>
-    <menuitem id="menu_chaitanya_booking_bookings" name="Bookings" parent="menu_chaitanya_booking_root" action="action_chaitanya_booking" sequence="10"/>
-    <menuitem id="menu_chaitanya_booking_services" name="Services" parent="menu_chaitanya_booking_root" action="action_chaitanya_service" sequence="20"/>
-    <menuitem id="menu_chaitanya_booking_categories" name="Service Categories" parent="menu_chaitanya_booking_root" action="action_chaitanya_service_category" sequence="30"/>
-    <menuitem id="menu_chaitanya_booking_providers" name="Therapists" parent="menu_chaitanya_booking_root" action="action_chaitanya_provider" sequence="40"/>
-    <menuitem id="menu_chaitanya_booking_working_days" name="Therapist Availability" parent="menu_chaitanya_booking_root" action="action_chaitanya_working_day" sequence="50"/>
-    <menuitem id="menu_chaitanya_booking_vouchers" name="Vouchers" parent="menu_chaitanya_booking_root" action="action_chaitanya_voucher" sequence="60"/>
+    <data>  
+
+    <!-- ROOT -->
+        <menuitem id="menu_chaitanya_booking_root"
+                name="Chaitanya Booking Flow"
+                sequence="35"/>
+
+        <!-- BOOKINGS -->
+        <menuitem id="menu_chaitanya_booking_bookings"
+                name="Bookings"
+                parent="menu_chaitanya_booking_root"
+                action="action_chaitanya_booking"
+                sequence="10"/>
+
+        <!-- SERVICES -->
+        <menuitem id="menu_chaitanya_booking_services"
+                name="Services"
+                parent="menu_chaitanya_booking_root"
+                action="action_chaitanya_service"
+                sequence="20"/>
+
+        <menuitem id="menu_chaitanya_booking_categories"
+                name="Service Categories"
+                parent="menu_chaitanya_booking_root"
+                action="action_chaitanya_service_category"
+                sequence="30"/>
+
+        <!-- PROVIDERS -->
+        <menuitem id="menu_chaitanya_booking_providers"
+                name="Therapists"
+                parent="menu_chaitanya_booking_root"
+                action="action_chaitanya_provider"
+                sequence="40"/>
+
+        <!-- ===================================================== -->
+        <!-- SCHEDULE ROOT -->
+        <!-- ===================================================== -->
+
+        <menuitem id="menu_schedule_root"
+                name="Schedule Management"
+                parent="menu_chaitanya_booking_root"
+                sequence="50"/>
+
+        <!-- SCHEDULE TEMPLATES (BASE AVAILABILITY) -->
+        <menuitem id="menu_schedule_template"
+                name="Base Schedules"
+                parent="menu_schedule_root"
+                action="action_schedule_template"
+                sequence="1"/>
+
+        <!-- OVERRIDES (EXCEPTIONS) -->
+        <!-- <menuitem id="menu_schedule_override"
+                name="Schedule Overrides"
+                parent="menu_schedule_root"
+                action="action_schedule_override"
+                sequence="2"/> -->
+
+        <!-- OPTIONAL: PROVIDER VIEW (VERY USEFUL) -->
+        <menuitem id="menu_schedule_provider_view"
+                name="Provider Scheduling"
+                parent="menu_schedule_root"
+                action="action_chaitanya_provider"
+                sequence="3"/>
+
+        <!-- VOUCHERS -->
+        <menuitem id="menu_chaitanya_booking_vouchers"
+                name="Vouchers"
+                parent="menu_chaitanya_booking_root"
+                action="action_chaitanya_voucher"
+                sequence="60"/>
+
+
+    </data>
 </odoo>

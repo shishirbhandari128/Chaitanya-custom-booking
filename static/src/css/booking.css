@@ -35,4 +35,115 @@
 .ch-success{max-width:760px;padding-top:54px;padding-bottom:64px}
 .ch-summary{display:grid;grid-template-columns:180px 1fr;gap:8px 18px;margin:24px 0}
 .ch-summary dt{font-weight:700}
+.o_cart_product {
+    position: relative;
+}
+
+.ch-cart-delete-icon {
+    color: #dc3545;
+    font-size: 16px;
+    text-decoration: none;
+    margin-left: 8px;
+}
+
+.ch-cart-delete-icon:hover {
+    color: #a71d2a;
+}
+
+.ch-card-section {
+    margin: 24px 0;
+}
+
+.ch-card-section h2 {
+    font-size: 1.15rem;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.ch-therapist-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.ch-therapist-card {
+    border: 1px solid #dce3e5;
+    background: #fff;
+    color: #172126;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+}
+
+.ch-therapist-card:hover,
+.ch-therapist-card.is-selected {
+    border-color: #2e7d73;
+    box-shadow: 0 0 0 2px rgba(46, 125, 115, 0.14);
+}
+
+.ch-therapist-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #eef6f4;
+    flex: 0 0 auto;
+}
+
+.ch-therapist-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.ch-therapist-info strong,
+.ch-therapist-info small,
+.ch-nearest-time {
+    overflow-wrap: anywhere;
+}
+
+.ch-therapist-info small {
+    color: #5d6970;
+}
+
+.ch-nearest-time {
+    color: #2e7d73;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.ch-slot-card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ch-slot-card {
+    border: 1px solid #dce3e5;
+    background: #fff;
+    color: #172126;
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ch-slot-card:hover,
+.ch-slot-card.is-selected {
+    border-color: #2e7d73;
+    background: #e1f0ec;
+    color: #2e7d73;
+}
+
+.ch-empty-state {
+    color: #5d6970;
+    margin: 0;
+}
+
 @media(max-width:768px){.ch-services-layout,.ch-detail,.ch-form-grid,.ch-summary,.ch-method-grid{grid-template-columns:1fr}}

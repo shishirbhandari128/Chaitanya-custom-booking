@@ -28,11 +28,18 @@ class ChaitanyaAppointmentProvider(models.Model):
         "service_id",
         string="Services",
     )
-    available_slot_ids = fields.One2many(
-        "chaitanya.appointment.working_day",
+    weekly_template_ids = fields.One2many(
+        "chaitanya.appointment.schedule.template",
         "provider_id",
-        string="Available Slots",
+        string="Weekly Schedule"
     )
+
+   
     is_active_for_booking = fields.Boolean(default=True)
     active = fields.Boolean(default=True)
 
+ # override_ids = fields.One2many(
+    #     "chaitanya.appointment.schedule.override",
+    #     "provider_id",
+    #     string="Schedule Overrides"
+    # )
