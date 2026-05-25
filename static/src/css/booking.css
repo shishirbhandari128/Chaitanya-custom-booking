@@ -1,4 +1,743 @@
-.ch-booking{--ch-ink:#172126;--ch-muted:#5d6970;--ch-line:#dce3e5;--ch-accent:#2e7d73;color:var(--ch-ink)}
+
+
+/* ── Design Tokens ──────────────────────────────────────── */
+.ch-booking {
+    --ch-ink:        #1a1f1e;
+    --ch-muted:      #6b7775;
+    --ch-subtle:     #9eaaa8;
+    --ch-line:       #e2eae8;
+    --ch-line-soft:  #eef4f2;
+    --ch-accent:     #2a6b5f;
+    --ch-accent-dk:  #1e5045;
+    --ch-accent-lt:  #d6ede8;
+    --ch-accent-bg:  #f0f8f5;
+    --ch-warm:       #faf9f6;
+    --ch-white:      #ffffff;
+    --ch-gold:       #b89a6a;
+    --ch-shadow-sm:  0 1px 3px rgba(26,31,30,.06), 0 2px 8px rgba(26,31,30,.04);
+    --ch-shadow-md:  0 4px 16px rgba(26,31,30,.08), 0 1px 4px rgba(26,31,30,.06);
+    --ch-shadow-lg:  0 8px 32px rgba(26,31,30,.12), 0 2px 8px rgba(26,31,30,.06);
+    --ch-radius:     10px;
+    --ch-radius-lg:  14px;
+    --ch-transition: 220ms cubic-bezier(.4,0,.2,1);
+
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ch-ink);
+    background: var(--ch-warm);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Hero Header ────────────────────────────────────────── */
+.ch-booking-header {
+    position: relative;
+    min-height: 220px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.ch-hero-image-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.ch-hero-image {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    object-fit: cover;
+    object-position: center 35%;
+    display: block;
+}
+
+.ch-header-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(10,28,24,.08) 0%,
+        rgba(10,28,24,.42) 52%,
+        rgba(10,28,24,.74) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+.ch-header-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 0 0 28px;
+}
+
+.ch-header-content .container {
+    max-width: 1200px;
+}
+
+/* Important: in Odoo edit mode, let clicks reach the image behind the dynamic text */
+body.editor_enable .ch-header-content,
+body.editor_enable .ch-header-overlay {
+    pointer-events: none;
+}
+
+@media (max-width: 960px) {
+    .ch-booking-header {
+        min-height: 190px;
+    }
+
+    .ch-booking-header h1 {
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .ch-booking-header {
+        min-height: 170px;
+    }
+}
+
+
+.ch-header-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(1.9rem, 4.5vw, 2.8rem);
+    font-weight: 400;
+    color: #fff;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+    margin: 0 0 8px;
+}
+
+
+
+.ch-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,.65);
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    text-decoration: none;
+    margin-bottom: 16px;
+    transition: color var(--ch-transition);
+}
+.ch-back-link::before { content: '←'; font-size: .95rem; }
+.ch-back-link:hover { color: #fff; text-decoration: none; }
+
+.ch-eyebrow {
+    display: inline-block;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 4px 14px;
+    color: rgba(255,255,255,.9);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.ch-header-service-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255,255,255,.75);
+    letter-spacing: .02em;
+    margin: 0;
+}
+
+/* ── Page Layout ────────────────────────────────────────── */
+.ch-booking .ch-flow-page {
+    max-width: 1200px;
+    padding-top: 0;
+    padding-bottom: 72px;
+}
+
+/* ── Two-column shell ───────────────────────────────────── */
+.ch-booking-shell {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 28px;
+    align-items: start;
+    margin-top: 28px;
+}
+
+/* ── Main form panel ────────────────────────────────────── */
+.ch-form-panel {
+    background: var(--ch-white);
+    border-radius: var(--ch-radius-lg);
+    box-shadow: var(--ch-shadow-lg);
+    overflow: hidden;
+}
+
+.ch-panel-section {
+    padding: 24px 28px;
+    border-bottom: 1.5px solid var(--ch-line-soft);
+}
+.ch-panel-section:last-child { border-bottom: none; }
+
+.ch-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.ch-section-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--ch-ink);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ch-section-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 18px;
+    background: var(--ch-accent);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+/* Date row */
+.ch-date-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.ch-date-label {
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ch-muted);
+    display: block;
+    margin-bottom: 6px;
+}
+
+.ch-booking-form input[type="date"],
+.ch-booking-form select {
+    padding: 9px 12px;
+    border: 1.5px solid var(--ch-line);
+    border-radius: var(--ch-radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .9rem;
+    color: var(--ch-ink);
+    background: var(--ch-warm);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color var(--ch-transition), box-shadow var(--ch-transition);
+    width: 100%;
+}
+
+.ch-booking-form select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7775' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+.ch-booking-form input:focus,
+.ch-booking-form select:focus {
+    border-color: var(--ch-accent);
+    box-shadow: 0 0 0 3px rgba(42,107,95,.1);
+    background: var(--ch-white);
+}
+
+/* ── Therapist Cards ────────────────────────────────────── */
+.ch-therapist-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+}
+
+.ch-therapist-card {
+    border: 1.5px solid var(--ch-line);
+    background: var(--ch-white);
+    border-radius: var(--ch-radius);
+    padding: 0;
+    overflow: hidden;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: var(--ch-shadow-sm);
+    transition: border-color var(--ch-transition), box-shadow var(--ch-transition), transform var(--ch-transition);
+    position: relative;
+    width: 100%;
+}
+
+.ch-therapist-card:hover {
+    border-color: var(--ch-accent);
+    box-shadow: var(--ch-shadow-md);
+    transform: translateY(-2px);
+}
+
+.ch-therapist-card.is-selected {
+    border-color: var(--ch-accent);
+    box-shadow: var(--ch-shadow-md), 0 0 0 3px rgba(42,107,95,.12);
+}
+
+.ch-therapist-photo-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--ch-accent-lt);
+}
+
+.ch-therapist-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    transition: transform 400ms ease;
+}
+
+.ch-therapist-card:hover .ch-therapist-photo {
+    transform: scale(1.04);
+}
+
+/* Selected overlay on photo */
+.ch-therapist-card.is-selected .ch-therapist-photo-wrap::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    background: rgba(42,107,95,.35);
+    color: #fff;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(1px);
+}
+
+.ch-therapist-body {
+    padding: 12px 14px 14px;
+    text-align: left;
+}
+
+.ch-therapist-name {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--ch-ink);
+    margin: 0 0 2px;
+}
+
+.ch-therapist-spec {
+    font-size: .75rem;
+    color: var(--ch-muted);
+    margin: 0 0 6px;
+}
+
+.ch-nearest-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--ch-accent);
+    background: var(--ch-accent-bg);
+    border-radius: 5px;
+    padding: 3px 8px;
+}
+
+.ch-choose-btn {
+    display: block;
+    width: calc(100% - 28px);
+    margin: 0 14px 14px;
+    padding: 7px;
+    background: var(--ch-accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--ch-transition), transform var(--ch-transition);
+}
+
+.ch-choose-btn:hover { background: var(--ch-accent-dk); }
+.ch-therapist-card.is-selected .ch-choose-btn {
+    background: var(--ch-accent-dk);
+}
+
+/* ── Time Slot Grid ─────────────────────────────────────── */
+.ch-slots-label {
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ch-muted);
+    margin-bottom: 12px;
+}
+
+.ch-slot-card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ch-slot-card {
+    border: 1.5px solid var(--ch-line);
+    background: var(--ch-white);
+    color: var(--ch-ink);
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--ch-shadow-sm);
+    transition: border-color var(--ch-transition), background var(--ch-transition), color var(--ch-transition), transform var(--ch-transition);
+}
+
+.ch-slot-card:hover {
+    border-color: var(--ch-accent);
+    background: var(--ch-accent-bg);
+    color: var(--ch-accent);
+    transform: translateY(-1px);
+}
+
+.ch-slot-card.is-selected {
+    border-color: var(--ch-accent);
+    background: var(--ch-accent);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(42,107,95,.3);
+}
+
+/* ── Sidebar ────────────────────────────────────────────── */
+.ch-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 24px;
+}
+
+/* Order Summary card */
+.ch-order-summary {
+    background: var(--ch-white);
+    border-radius: var(--ch-radius-lg);
+    box-shadow: var(--ch-shadow-md);
+    overflow: hidden;
+}
+
+.ch-order-summary-head {
+    background: linear-gradient(135deg, var(--ch-accent-dk), var(--ch-accent));
+    padding: 16px 20px;
+    color: #fff;
+}
+
+.ch-order-summary-head h3 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 400;
+    margin: 0 0 2px;
+    letter-spacing: .01em;
+}
+
+.ch-order-summary-head p {
+    font-size: .78rem;
+    color: rgba(255,255,255,.7);
+    margin: 0;
+}
+
+.ch-order-summary-body {
+    padding: 18px 20px;
+}
+
+.ch-order-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--ch-line-soft);
+    font-size: .88rem;
+    color: var(--ch-muted);
+}
+
+.ch-order-row:last-child { border-bottom: none; }
+
+.ch-order-row.is-total {
+    padding-top: 12px;
+    margin-top: 4px;
+    border-top: 1.5px solid var(--ch-line);
+    border-bottom: none;
+    font-size: 1rem;
+    color: var(--ch-ink);
+    font-weight: 600;
+}
+
+.ch-order-price {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.5rem;
+    color: var(--ch-accent-dk);
+    font-weight: 400;
+}
+
+/* Promo code card */
+.ch-promo-card {
+    background: var(--ch-white);
+    border-radius: var(--ch-radius-lg);
+    box-shadow: var(--ch-shadow-sm);
+    padding: 18px 20px;
+    border: 1.5px solid var(--ch-line-soft);
+}
+
+.ch-promo-label {
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ch-muted);
+    margin-bottom: 10px;
+}
+
+.ch-promo-row {
+    display: flex;
+    gap: 8px;
+}
+
+.ch-promo-input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1.5px solid var(--ch-line);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    color: var(--ch-ink);
+    background: var(--ch-warm);
+    outline: none;
+    transition: border-color var(--ch-transition), box-shadow var(--ch-transition);
+}
+
+.ch-promo-input::placeholder { color: var(--ch-subtle); font-style: italic; }
+
+.ch-promo-input:focus {
+    border-color: var(--ch-accent);
+    box-shadow: 0 0 0 3px rgba(42,107,95,.1);
+    background: #fff;
+}
+
+.ch-promo-apply {
+    padding: 9px 16px;
+    background: var(--ch-accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--ch-transition);
+}
+
+.ch-promo-apply:hover { background: var(--ch-accent-dk); }
+
+/* Gift options card */
+.ch-gift-card {
+    background: var(--ch-white);
+    border-radius: var(--ch-radius-lg);
+    box-shadow: var(--ch-shadow-sm);
+    padding: 18px 20px;
+    border: 1.5px solid var(--ch-line-soft);
+}
+
+.ch-gift-card-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: .95rem;
+    font-weight: 400;
+    color: var(--ch-ink);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ch-gift-card-title::before {
+    content: '🎁';
+    font-size: .85rem;
+}
+
+.ch-gift-field {
+    margin-bottom: 12px;
+}
+
+.ch-gift-field:last-child { margin-bottom: 0; }
+
+.ch-gift-field label {
+    display: block;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ch-muted);
+    margin-bottom: 6px;
+}
+
+.ch-gift-field input,
+.ch-gift-field select,
+.ch-gift-field textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--ch-line);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    color: var(--ch-ink);
+    background: var(--ch-warm);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    resize: vertical;
+    transition: border-color var(--ch-transition), box-shadow var(--ch-transition);
+}
+
+.ch-gift-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7775' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+.ch-gift-field input:focus,
+.ch-gift-field select:focus,
+.ch-gift-field textarea:focus {
+    border-color: var(--ch-accent);
+    box-shadow: 0 0 0 3px rgba(42,107,95,.1);
+    background: #fff;
+}
+
+.ch-gift-field textarea { min-height: 70px; }
+
+/* ── Checkout CTA ───────────────────────────────────────── */
+.ch-checkout-cta {
+    background: var(--ch-white);
+    border-radius: var(--ch-radius-lg);
+    box-shadow: var(--ch-shadow-sm);
+    padding: 18px 20px;
+    border: 1.5px solid var(--ch-line-soft);
+}
+
+.ch-checkout-note {
+    font-size: .78rem;
+    color: var(--ch-subtle);
+    line-height: 1.55;
+    margin: 0 0 14px;
+    padding: 8px 12px;
+    background: var(--ch-line-soft);
+    border-radius: 6px;
+    border-left: 3px solid var(--ch-accent-lt);
+}
+
+.ch-submit-btn {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--ch-accent-dk) 0%, var(--ch-accent) 100%);
+    color: #fff;
+    border: none;
+    border-radius: var(--ch-radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(42,107,95,.3);
+    transition: filter var(--ch-transition), transform var(--ch-transition), box-shadow var(--ch-transition);
+}
+
+.ch-submit-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(42,107,95,.38);
+}
+
+.ch-submit-btn:active {
+    transform: translateY(0);
+    filter: brightness(.97);
+}
+
+/* ── Empty / Loading states ─────────────────────────────── */
+.ch-empty-state {
+    color: var(--ch-subtle);
+    font-size: .88rem;
+    font-style: italic;
+    margin: 0;
+    padding: 12px 0;
+}
+
+@keyframes ch-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .4; }
+}
+
+.ch-empty-state.is-loading {
+    animation: ch-pulse 1.4s ease-in-out infinite;
+    color: var(--ch-muted);
+    font-style: normal;
+}
+
+/* ── Card entrance ──────────────────────────────────────── */
+@keyframes ch-card-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.ch-therapist-card,
+.ch-slot-card {
+    animation: ch-card-in 240ms ease both;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 960px) {
+    .ch-booking-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .ch-sidebar {
+        position: static;
+        order: -1;
+    }
+
+    .ch-order-summary,
+    .ch-promo-card,
+    .ch-gift-card,
+    .ch-checkout-cta {
+        border-radius: var(--ch-radius);
+    }
+
+    .ch-booking-header { min-height: 200px; }
+    .ch-booking-header h1 { font-size: 1.75rem; }
+}
+
+@media (max-width: 480px) {
+    .ch-panel-section { padding: 18px 16px; }
+    .ch-therapist-card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Preserve legacy non-select page rules ──────────────── */
 .ch-services-hero{padding:56px 0 28px;background:#eef6f4}
 .ch-services-layout{display:grid;grid-template-columns:220px 1fr;gap:28px;padding-top:32px;padding-bottom:48px}
 .ch-category-filter,.ch-book-panel{border:1px solid var(--ch-line);border-radius:8px;padding:18px;align-self:start}
@@ -8,15 +747,12 @@
 .ch-service-card{border:1px solid var(--ch-line);border-radius:8px;overflow:hidden;background:#fff}
 .ch-service-card img{width:100%;aspect-ratio:4/3;object-fit:cover}
 .ch-service-card-body{padding:16px}
-.ch-eyebrow{color:var(--ch-accent);font-size:.78rem;font-weight:700;text-transform:uppercase}
 .ch-service-meta{display:flex;gap:12px;margin:12px 0;color:var(--ch-muted)}
 .ch-detail{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;padding-top:40px;padding-bottom:54px}
-.ch-back-link{display:inline-block;margin-bottom:18px}
 .ch-lead{font-size:1.15rem;color:var(--ch-muted)}
 .ch-book-panel .btn{width:100%;margin-bottom:10px}
 .ch-therapist-row{border-top:1px solid var(--ch-line);padding:10px 0}
 .ch-therapist-row span{display:block;color:var(--ch-muted)}
-.ch-flow-page{max-width:900px;padding-top:42px;padding-bottom:64px}
 .ch-method-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
 .ch-method-card{display:block;border:1px solid var(--ch-line);border-radius:8px;padding:18px;background:#fff;color:var(--ch-ink)}
 .ch-method-card:hover{border-color:var(--ch-accent);text-decoration:none}
@@ -26,124 +762,13 @@
 .ch-modal.is-open{display:block}
 .ch-modal-dialog{position:relative;max-width:760px;margin:30px auto;background:#fff;border-radius:8px;padding:24px}
 .ch-modal-close{position:absolute;top:12px;right:12px;border:0;background:transparent;font-size:24px}
-.ch-booking-form fieldset{border:1px solid var(--ch-line);border-radius:8px;padding:16px;margin-bottom:16px}
-.ch-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.ch-booking-form label{display:block;font-weight:600}
-.ch-booking-form input,.ch-booking-form select,.ch-booking-form textarea{width:100%;margin-top:5px}
-.ch-price-box{display:flex;justify-content:space-between;gap:14px;padding:12px 14px;border-radius:8px;background:#eef6f4;margin-bottom:16px}
-.ch-checkout-note{color:var(--ch-muted);font-size:.95rem;margin:0 0 12px}
 .ch-success{max-width:760px;padding-top:54px;padding-bottom:64px}
 .ch-summary{display:grid;grid-template-columns:180px 1fr;gap:8px 18px;margin:24px 0}
 .ch-summary dt{font-weight:700}
-.o_cart_product {
-    position: relative;
-}
+.o_cart_product{position:relative}
+.ch-cart-delete-icon{color:#dc3545;font-size:16px;text-decoration:none;margin-left:8px}
+.ch-cart-delete-icon:hover{color:#a71d2a}
 
-.ch-cart-delete-icon {
-    color: #dc3545;
-    font-size: 16px;
-    text-decoration: none;
-    margin-left: 8px;
-}
+@media(max-width:768px){.ch-services-layout,.ch-detail,.ch-summary,.ch-method-grid{grid-template-columns:1fr}}
 
-.ch-cart-delete-icon:hover {
-    color: #a71d2a;
-}
 
-.ch-card-section {
-    margin: 24px 0;
-}
-
-.ch-card-section h2 {
-    font-size: 1.15rem;
-    margin-bottom: 12px;
-    font-weight: 700;
-}
-
-.ch-therapist-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
-}
-
-.ch-therapist-card {
-    border: 1px solid #dce3e5;
-    background: #fff;
-    color: #172126;
-    border-radius: 8px;
-    padding: 12px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    text-align: left;
-    width: 100%;
-    cursor: pointer;
-}
-
-.ch-therapist-card:hover,
-.ch-therapist-card.is-selected {
-    border-color: #2e7d73;
-    box-shadow: 0 0 0 2px rgba(46, 125, 115, 0.14);
-}
-
-.ch-therapist-photo {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #eef6f4;
-    flex: 0 0 auto;
-}
-
-.ch-therapist-info {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-}
-
-.ch-therapist-info strong,
-.ch-therapist-info small,
-.ch-nearest-time {
-    overflow-wrap: anywhere;
-}
-
-.ch-therapist-info small {
-    color: #5d6970;
-}
-
-.ch-nearest-time {
-    color: #2e7d73;
-    font-size: 0.86rem;
-    font-weight: 700;
-}
-
-.ch-slot-card-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.ch-slot-card {
-    border: 1px solid #dce3e5;
-    background: #fff;
-    color: #172126;
-    border-radius: 6px;
-    padding: 9px 14px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.ch-slot-card:hover,
-.ch-slot-card.is-selected {
-    border-color: #2e7d73;
-    background: #e1f0ec;
-    color: #2e7d73;
-}
-
-.ch-empty-state {
-    color: #5d6970;
-    margin: 0;
-}
-
-@media(max-width:768px){.ch-services-layout,.ch-detail,.ch-form-grid,.ch-summary,.ch-method-grid{grid-template-columns:1fr}}

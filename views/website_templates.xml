@@ -1,249 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- <template id="services_page" name="Chaitanya Services">
-        <t t-call="website.layout">
-            <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking.css"/>
-            <div id="wrap" class="ch-booking">
-                <section class="ch-services-hero">
-                    <div class="container">
-                        <h1>Services</h1>
-                        <p>Choose a wellness service and book by therapist or availability.</p>
-                    </div>
-                </section>
-                <section class="container ch-services-layout">
-                    <aside class="ch-category-filter">
-                        <a href="/services" t-att-class="'ch-category-link %s' % (not selected_category and 'active' or '')">All</a>
-                        <t t-foreach="categories" t-as="category">
-                            <a t-att-href="'/services?category=%s' % category.id"
-                               t-att-class="'ch-category-link %s' % (selected_category and selected_category.id == category.id and 'active' or '')">
-                                <t t-out="category.name"/>
-                            </a>
-                        </t>
-                    </aside>
-                    <div class="ch-service-grid">
-                        <t t-foreach="services" t-as="service">
-                            <article class="ch-service-card">
-                                <t t-if="service.image">
-                                    <img t-att-src="'/web/image/chaitanya.appointment.service/%s/image' % service.id" t-att-alt="service.name"/>
-                                </t>
-                                <div class="ch-service-card-body">
-                                    <span class="ch-eyebrow" t-out="service.category_id.name"/>
-                                    <h2 t-out="service.name"/>
-                                    <p t-out="service.short_description or ''"/>
-                                    <div class="ch-service-meta">
-                                        <span><t t-out="service.duration"/> min</span>
-                                        <span><t t-out="service.currency_id.symbol"/> <t t-out="service.price"/></span>
-                                    </div>
-                                    <a class="btn btn-primary" t-att-href="'/services/%s' % service.id">View and Book</a>
-                                </div>
-                            </article>
-                        </t>
-                        <t t-if="not services">
-                            <p>No published services yet. Create services from Chaitanya Booking Flow in the backend.</p>
-                        </t>
-                    </div>
-                </section>
-            </div>
-        </t>
-    </template>
 
-    <template id="service_detail_page" name="Chaitanya Service Detail">
-        <t t-call="website.layout">
-            <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking.css"/>
-            <div id="wrap" class="ch-booking">
-                <section class="container ch-detail">
-                    <div class="ch-detail-main">
-                        <a href="/services" class="ch-back-link">Services</a>
-                        <span class="ch-eyebrow" t-out="service.category_id.name"/>
-                        <h1 t-out="service.name"/>
-                        <p class="ch-lead" t-out="service.short_description or ''"/>
-                        <div class="ch-service-meta ch-detail-meta">
-                            <span><t t-out="service.duration"/> minutes</span>
-                            <span><t t-out="service.currency_id.symbol"/> <t t-out="service.price"/></span>
-                        </div>
-                        <div class="ch-rich-text">
-                            <h3>Overview</h3>
-                            <t t-raw="service.description or ''"/>
-                            <h3>Benefits</h3>
-                            <t t-raw="service.benefits or ''"/>
-                        </div>
-                    </div>
-                    <aside class="ch-book-panel">
-                        <h2>Book this service</h2>
-                        <a class="btn btn-primary" t-att-href="'/booking/start/%s?gift=0' % service.id">Book Now</a>
-                        <t t-if="service.allow_gift">
-                            <a class="btn btn-outline-primary" t-att-href="'/booking/start/%s?gift=1' % service.id">Gift Now</a>
-                        </t>
-                        <div class="ch-therapists">
-                            <h3>Therapists</h3>
-                            <t t-foreach="service.provider_ids" t-as="provider">
-                                <div class="ch-therapist-row">
-                                    <strong t-out="provider.name"/>
-                                    <span t-out="provider.specialization or ''"/>
-                                </div>
-                            </t>
-                        </div>
-                    </aside>
-                </section>
-            </div>
-        </t>
-    </template> -->
 
     <template id="booking_start_page" name="Choose Booking Method">
         <t t-call="website.layout">
             <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking.css"/>
             <div id="wrap" class="ch-booking">
                 <section class="container ch-flow-page">
-                    <!-- <a t-att-href="'/services/%s' % service.id" class="ch-back-link">Back to service</a> -->
+
+                    <!-- Dynamic eyebrow — NOT editable -->
                     <span class="ch-eyebrow" t-out="is_gift and 'Gift Booking' or 'Booking'"/>
-                    <h1>Select booking preference</h1>
-                    <p class="ch-lead"><t t-out="service.name"/> · <t t-out="service.currency_id.symbol"/> <t t-out="service.price"/></p>
-                    <div class="ch-method-grid">
-                        <a class="ch-method-card" t-att-href="'/booking/select/%s/therapist?gift=%s' % (service.id, is_gift and 1 or 0)">
-                            <strong>Book by Therapist</strong>
-                            <span>Choose a therapist first, then pick from their available dates and times.</span>
-                        </a>
-                        <a class="ch-method-card" t-att-href="'/booking/select/%s/availability?gift=%s' % (service.id, is_gift and 1 or 0)">
-                            <strong>Book by Availability</strong>
-                            <span>Choose a preferred date first, then see therapists with open slots.</span>
-                        </a>
+
+                    <!-- Static heading — editable -->
+                    <div class="oe_structure" id="ch_start_heading">
+                        <h1>Select booking preference</h1>
                     </div>
+
+                    <!-- Dynamic service info — NOT editable -->
+                    <p class="ch-lead">
+                        <t t-out="service.name"/> · 
+                        <t t-out="service.currency_id.symbol"/>
+                        <t t-out="service.price"/>
+                    </p>
+
+           
+                    <div class="ch-method-grid">
+
+                        <a class="ch-method-card"
+                           t-att-href="'/booking/select/%s/therapist?gift=%s' % (service.id, is_gift and 1 or 0)">
+                            <div class="oe_structure" id="ch_start_card_therapist">
+                                <strong>Book by Therapist</strong>
+                                <span>Choose a therapist first, then pick from their available dates and times.</span>
+                            </div>
+                        </a>
+
+                        <a class="ch-method-card"
+                           t-att-href="'/booking/select/%s/availability?gift=%s' % (service.id, is_gift and 1 or 0)">
+                            <div class="oe_structure" id="ch_start_card_availability">
+                                <strong>Book by Availability</strong>
+                                <span>Choose a preferred date first, then see therapists with open slots.</span>
+                            </div>
+                        </a>
+                        
+                        
+
+                    </div>
+
+                    <!-- Extra drop zone below the cards for banners, text blocks, etc. -->
+                    <div class="oe_structure" id="ch_start_footer_zone"/>
+
                 </section>
             </div>
         </t>
     </template>
 
-    <template id="booking_select_page" name="Select Booking Slot">
+
+   <template id="booking_select_page" name="Select Booking Slot">
         <t t-call="website.layout">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&amp;family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&amp;display=swap"/>
             <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking.css"/>
 
             <div id="wrap" class="ch-booking">
+
+                <!-- ── Hero Header ──────────────────────────────── -->
+                <!--
+                    oe_img_bg        → website builder shows "Change Background Image" in its panel
+                    o_we_bg_filter   → enables the opacity/color overlay controls
+                    o_not_editable   → prevents the builder from letting users drag snippets INTO
+                                    this section (we only want bg editing, not content editing)
+                    The inline style sets the default image; the builder overwrites this
+                    style attribute directly when the user picks a new image — no extra
+                    controller needed.
+                -->
+                <section id="ch_hero_bg"
+                        class="ch-booking-header"
+                        data-name="Hero Header">
+
+                    <div class="ch-hero-image-wrap">
+                        <img src="/chaitanya_booking_flow/static/src/img/booking-hero.jpg"
+                            class="ch-hero-image img img-fluid"
+                            alt="Booking hero"/>
+                    </div>
+
+                    <div class="ch-header-overlay"/>
+
+                    <div class="ch-header-content">
+                        <div class="container">
+
+                            <a t-att-href="'/booking/start/%s?gift=%s' % (service.id, is_gift and 1 or 0)"
+                            class="ch-back-link">Booking preference</a>
+
+                            <div>
+                                <span class="ch-eyebrow"
+                                    t-out="booking_method == 'therapist' and 'Book by Therapist' or 'Book by Availability'"/>
+                            </div>
+
+                            <h1 class="ch-header-title">Choose Your Therapist &amp; Time</h1>
+
+                            <p class="ch-header-service-name" t-out="service.name"/>
+
+                        </div>
+                    </div>
+
+                </section>
+
+                
+                <!-- ── Two-column shell ────────────────────────── -->
                 <section class="container ch-flow-page">
-                    <a t-att-href="'/booking/start/%s?gift=%s' % (service.id, is_gift and 1 or 0)"
-                    class="ch-back-link">
-                        Booking preference
-                    </a>
-
-                    <span class="ch-eyebrow"
-                        t-out="booking_method == 'therapist' and 'Book by Therapist' or 'Book by Availability'"/>
-
-                    <h1>Select therapist and time</h1>
-                    <p class="ch-lead" t-out="service.name"/>
-
                     <form action="/booking/submit" method="post" class="ch-booking-form">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="service_id" t-att-value="service.id"/>
                         <input type="hidden" name="booking_method" t-att-value="booking_method"/>
                         <input type="hidden" name="is_gift" id="chIsGift" t-att-value="is_gift and 1 or 0"/>
-
                         <input type="hidden" name="provider_id" id="chProviderId"/>
                         <input type="hidden" name="start_datetime" id="chStartDatetime"/>
 
-                        <div class="ch-form-grid">
-                            <label id="chDateInputWrap"
-                                t-att-hidden="booking_method == 'therapist' and 'hidden' or None">
-                                Preferred Date
-                                <input type="date" id="chBookingDate"/>
-                            </label>
+                        <div class="ch-booking-shell">
 
-                            <label id="chDateSelectWrap"
-                                t-att-hidden="booking_method == 'availability' and 'hidden' or None">
-                                Available Date
-                                <select id="chAvailableDateSelect">
-                                    <option value="">Choose therapist first</option>
-                                </select>
-                            </label>
+                            <!-- ── LEFT: Main form panel ───────── -->
+                            <div class="ch-form-panel">
 
-                            <label>
-                                Voucher Code
-                                <input type="text" name="voucher_code" id="chVoucherCode" placeholder="Optional"/>
-                            </label>
-                        </div>
+                                <!-- Date picker section -->
+                                <div class="ch-panel-section">
+                                    <div class="ch-section-header">
+                                        <h2 class="ch-section-title">Select a Therapist</h2>
+                                    </div>
 
-                        <div class="ch-card-section">
-                            <h2>Available Therapists</h2>
-                            <div id="chTherapistCards" class="ch-therapist-card-grid">
-                                <p class="ch-empty-state">Loading therapists...</p>
+                                    <!-- Availability mode: date input -->
+                                    <div id="chDateInputWrap"
+                                        t-att-hidden="booking_method == 'therapist' and 'hidden' or None">
+                                        <span class="ch-date-label">Preferred Date</span>
+                                        <input type="date" id="chBookingDate" style="max-width:220px;"/>
+                                    </div>
+
+                                    <!-- Therapist mode: date select (populated by JS) -->
+                                    <div id="chDateSelectWrap"
+                                        t-att-hidden="booking_method == 'availability' and 'hidden' or None">
+                                        <span class="ch-date-label">Available Date</span>
+                                        <select id="chAvailableDateSelect" style="max-width:220px;">
+                                            <option value="">Choose therapist first</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Therapist cards -->
+                                <div class="ch-panel-section">
+                                    <div id="chTherapistCards" class="ch-therapist-card-grid o_not_editable" contenteditable="false">
+                                        <p class="ch-empty-state is-loading">Loading therapists…</p>
+                                    </div>
+                                </div>
+
+                                <!-- Time slots -->
+                                <div class="ch-panel-section">
+                                    <div class="ch-section-header">
+                                        <div class="oe_structure" id="ch_pick_time_title">
+                                            <h2 class="ch-section-title">Pick a Time Slot</h2>
+                                        </div>
+                                    </div>
+                                    <p class="ch-slots-label">Available Times Today</p>
+                                    <div id="chSlotCards" class="ch-slot-card-grid">
+                                        <p class="ch-empty-state">Choose a therapist to see times.</p>
+                                    </div>
+                                </div>
+
                             </div>
-                        </div>
 
-                        <div class="ch-card-section">
-                            <h2>Available Times</h2>
-                            <div id="chSlotCards" class="ch-slot-card-grid">
-                                <p class="ch-empty-state">Choose a therapist to see times.</p>
-                            </div>
-                        </div>
+                            <!-- ── RIGHT: Sidebar ──────────────── -->
+                            <div class="ch-sidebar">
 
-                        <div class="ch-price-box" id="chPriceBox">
-                            <span>Price</span>
-                            <strong>
-                                <t t-out="service.currency_id.symbol"/>
-                                <t t-out="service.price"/>
-                            </strong>
-                        </div>
+                                <!-- Order Summary -->
+                                <div class="ch-order-summary">
+                                    <div class="ch-order-summary-head">
+                                        <h3>Order Summary</h3>
+                                        <p t-out="service.name"/>
+                                    </div>
+                                    <div class="ch-order-summary-body">
+                                        <div class="ch-order-row">
+                                            <span>Service</span>
+                                            <span t-out="service.name"/>
+                                        </div>
+                                        <div class="ch-order-row">
+                                            <span>Duration</span>
+                                            <span><t t-out="service.duration"/> min</span>
+                                        </div>
+                                        <div class="ch-order-row is-total" id="chPriceBox">
+                                            <span>Total Price</span>
+                                            <strong class="ch-order-price">
+                                                <t t-out="service.currency_id.symbol"/><t t-out="service.price"/>
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <fieldset class="ch-gift-fields" id="chGiftFields"
-                                t-att-hidden="not is_gift and 'hidden' or None">
-                            <legend>Gift Details</legend>
+                                <!-- Gift Options — shown only when is_gift=1 -->
+                                <div class="ch-gift-card" id="chGiftFields"
+                                    t-att-hidden="not is_gift and 'hidden' or None">
+                                    <h3 class="ch-gift-card-title">Gift Options</h3>
 
-                            <label>
-                                Delivery Type
-                                <select name="gift_delivery_type" id="chGiftDeliveryType">
-                                    <option value="online">Online</option>
-                                    <option value="local">Local Address</option>
-                                </select>
-                            </label>
+                                    <div class="ch-gift-field">
+                                        <label>Delivery Type</label>
+                                        <select name="gift_delivery_type" id="chGiftDeliveryType">
+                                            <option value="online">Online (Email)</option>
+                                            <option value="local">Local Address</option>
+                                        </select>
+                                    </div>
 
-                            <label id="chGiftEmailWrap">
-                                Recipient Email
-                                <input type="email" name="gift_recipient_email" id="chGiftRecipientEmail"/>
-                            </label>
+                                    <div class="ch-gift-field" id="chGiftEmailWrap">
+                                        <label>Recipient's Email</label>
+                                        <input type="email" name="gift_recipient_email"
+                                            id="chGiftRecipientEmail"
+                                            placeholder="recipient@email.com"/>
+                                    </div>
 
-                            <label id="chGiftAddressWrap" hidden="hidden">
-                                Recipient Address
-                                <textarea name="gift_recipient_address" id="chGiftRecipientAddress" rows="2"/>
-                            </label>
+                                    <div class="ch-gift-field" id="chGiftAddressWrap" hidden="hidden">
+                                        <label>Recipient Address</label>
+                                        <textarea name="gift_recipient_address"
+                                                id="chGiftRecipientAddress"
+                                                rows="2"
+                                                placeholder="Full delivery address"/>
+                                    </div>
 
-                            <label>
-                                Gift Message
-                                <textarea name="gift_message" rows="2"/>
-                            </label>
-                        </fieldset>
+                                    <div class="ch-gift-field">
+                                        <label>Gift Message</label>
+                                        <textarea name="gift_message"
+                                                rows="3"
+                                                placeholder="Write a special message…"/>
+                                    </div>
+                                </div>
 
-                        <p class="ch-checkout-note">
-                            This reserves your selected slot, adds the service to cart, and sends you to Odoo checkout.
-                        </p>
+                                <!-- CTA -->
+                                <div class="ch-checkout-cta">
+                                    <div class="oe_structure" id="ch_select_checkout_note">
+                                        <p class="ch-checkout-note">
+                                            This reserves your selected slot, adds the service to cart,
+                                            and sends you to checkout.
+                                        </p>
+                                    </div>
+                                    <div class="oe_structure" id="ch_select_cta">
+                                        <button type="submit" class="ch-submit-btn">
+                                            add to Cart Proceed to Checkout
+                                        </button>
+                                    </div>
+                                </div>
 
-                        <button type="submit" class="btn btn-primary">
-                            Add to Cart and Checkout
-                        </button>
+                            </div><!-- /sidebar -->
+                        </div><!-- /shell -->
                     </form>
                 </section>
             </div>
-
             <script src="/chaitanya_booking_flow/static/src/js/booking.js"></script>
-        </t>
-    </template>
-
-    <template id="booking_success_page" name="Chaitanya Booking Success">
-        <t t-call="website.layout">
-            <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking.css"/>
-            <div id="wrap" class="ch-booking">
-                <section class="container ch-success">
-                    <h1>Booking Confirmed</h1>
-                    <p>Your booking reference is <strong t-out="booking.name"/>.</p>
-                    <dl class="ch-summary">
-                        <dt>Service</dt><dd t-out="booking.service_id.name"/>
-                        <dt>Therapist</dt><dd t-out="booking.provider_id.name"/>
-                        <dt>Date and Time</dt><dd t-out="booking.start_datetime"/>
-                        <dt>Customer</dt><dd t-out="booking.customer_name"/>
-                        <dt>Payment</dt><dd><t t-out="booking.payment_method"/> / <t t-out="booking.payment_status"/></dd>
-                        <dt>Total</dt><dd><t t-out="booking.currency_id.symbol"/> <t t-out="booking.final_amount"/></dd>
-                    </dl>
-                    <a class="btn btn-primary" t-att-href="'/booking/download/%s' % booking.name">Download PDF Summary</a>
-                    <a class="btn btn-outline-primary" href="/services">Book Another Service</a>
-                </section>
-            </div>
         </t>
     </template>
 
@@ -252,11 +257,28 @@
             <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking.css"/>
             <div id="wrap" class="ch-booking">
                 <section class="container ch-success">
-                    <h1>Booking Could Not Be Completed</h1>
+
+                    <!-- Static heading — editable -->
+                    <div class="oe_structure" id="ch_error_heading">
+                        <h1>Booking Could Not Be Completed</h1>
+                    </div>
+
+                    <!-- Dynamic error message — NOT editable -->
                     <p t-out="message"/>
-                    <a class="btn btn-primary" href="/services">Choose Another Slot</a>
+
+                    <!-- CTA button — label editable, href is static so fully editable -->
+                    <div class="oe_structure" id="ch_error_cta">
+                        <a class="btn btn-primary" href="/services">
+                            Choose Another Slot
+                        </a>
+                    </div>
+
+                    <!-- Extra drop zone — for support contact info, FAQs, etc. -->
+                    <div class="oe_structure" id="ch_error_footer_zone"/>
+
                 </section>
             </div>
         </t>
     </template>
+
 </odoo>

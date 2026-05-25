@@ -202,6 +202,26 @@ class ChaitanyaAppointmentController(http.Controller):
             "is_gift": is_gift,
         })
 
+    # @http.route("/booking/select/<int:service_id>/<string:method>", type="http", auth="public", website=True)
+    # def booking_select(self, service_id, method, gift="0", **kwargs):
+    #     page = request.env['website.page'].search([('url', '=', '/booking/select')], limit=1)
+    #     service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
+
+    #     if method not in ("therapist", "availability"):
+    #         return request.not_found()
+
+    #     if not service.exists() or not service.active or not service.website_published:
+    #         return request.not_found()
+
+    #     is_gift = gift in ("1", "true", "True")
+
+    #     return request.render("chaitanya_booking_flow.booking_select_page_new", {
+    #         "service": service,
+    #         "booking_method": method,
+    #         "is_gift": is_gift,
+    #         'main_object': page,
+    #     })
+
     @http.route("/booking/get_therapist_cards", type="json", auth="public", website=True)
     def get_therapist_cards(self, service_id, date=False, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
@@ -236,24 +256,16 @@ class ChaitanyaAppointmentController(http.Controller):
 
         return self._get_provider_slots(service, provider, date_value)
 
-    
-    @http.route("/booking/validate_voucher", type="json", auth="public", website=True)
-    def validate_voucher(self, service_id, code=None, **kwargs):
-        service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
-        voucher = False
-        if code:
-            voucher = request.env["chaitanya.appointment.voucher"].sudo().search([("code", "=", code.strip())], limit=1)
-        if code and not voucher:
-            return {"valid": False, "message": "Voucher not found."}
-        partner = request.env.user.partner_id if not request.env.user._is_public() else False
-        if voucher and not voucher.is_valid_for_partner(partner):
-            return {"valid": False, "message": "Voucher is not valid."}
-        amounts = request.env["chaitanya.appointment.booking"].sudo().prepare_amounts(service, voucher, partner)
-        return {"valid": True, **amounts}
 
-
+    def _booking_error(self, message):
+        request.session["booking_error"] = message
+        return request.redirect("/booking")
+        
+ 
     @http.route("/booking/submit", type="http", auth="public", website=True, methods=["POST"], csrf=True)
     def submit_booking(self, **post):
+ 
+        # 1. Parse & validate core inputs
         try:
             service = request.env["chaitanya.appointment.service"].sudo().browse(int(post.get("service_id")))
             provider = request.env["chaitanya.appointment.provider"].sudo().browse(
@@ -262,66 +274,63 @@ class ChaitanyaAppointmentController(http.Controller):
             start_dt = fields.Datetime.from_string(post.get("start_datetime"))
         except (TypeError, ValueError):
             return self._booking_error("Please choose a valid service, therapist, and time slot.")
+ 
         if not service.exists() or not service.active or not service.website_published:
             return self._booking_error("The selected service is not available.")
+ 
         if not provider.exists() or provider not in service.provider_ids.filtered("active"):
             return self._booking_error("The selected therapist is not available for this service.")
-        
+ 
         service._ensure_checkout_product()
         if not service.product_id:
             return self._booking_error("This service is not linked to a checkout product yet.")
-
+ 
+        # 2. Check slot availability
         booking_model = request.env["chaitanya.appointment.booking"].sudo()
         if not booking_model._is_slot_available(service, provider, start_dt):
             return self._booking_error("The selected slot is no longer available. Please choose another time.")
-
-        partner = request.env.user.partner_id if not request.env.user._is_public() else False
-        voucher = False
-        voucher_code = (post.get("voucher_code") or "").strip()
-        if voucher_code:
-            voucher = request.env["chaitanya.appointment.voucher"].sudo().search([("code", "=", voucher_code)], limit=1)
-            if not voucher or not voucher.is_valid_for_partner(partner):
-                voucher = False
-        amounts = booking_model.prepare_amounts(service, voucher, partner)
-        booking = booking_model.create({
-            "service_id": service.id,
-            "provider_id": provider.id,
-            "partner_id": partner.id if partner else False,
-            "customer_name": partner.name if partner else False,
-            "customer_email": partner.email if partner else False,
-            "customer_phone": (partner.phone or partner.mobile) if partner else False,
-            "start_datetime": start_dt,
-            "end_datetime": start_dt + timedelta(minutes=service.duration),
-            "booking_method": post.get("booking_method") or "availability",
-            "is_gift": bool(post.get("is_gift")),
-            "gift_delivery_type": post.get("gift_delivery_type") or False,
-            "gift_recipient_email": post.get("gift_recipient_email"),
-            "gift_recipient_address": post.get("gift_recipient_address"),
-            "gift_message": post.get("gift_message"),
-            "voucher_id": voucher.id if voucher else False,
-            "payment_method": "online",
-            "notes": post.get("notes"),
-            "state": "reserved",
-            "payment_status": "pending",
-            **amounts,
-        })
-
+ 
+        # 3. Add service product to cart
         order = request.website.sale_get_order(force_create=True)
         cart_values = order._cart_update(
             product_id=service.product_id.id,
             add_qty=1,
-            chaitanya_booking_id=booking.id,
         )
+ 
         line = request.env["sale.order.line"].sudo().browse(cart_values.get("line_id"))
-        if not line.exists() or line.order_id.id != order.id:
-            booking.action_cancel()
-            return self._booking_error("We could not add this booking to your cart. Please try again.")
-        line.write({"booking_id": booking.id})
-        booking.write({
-            "sale_order_id": order.id,
-            "sale_order_line_id": line.id,
+        line.write({
+            "chaitanya_service_id": service.id,
+            "chaitanya_provider_id": provider.id,
+            "chaitanya_start_datetime": start_dt,
+            "chaitanya_end_datetime": start_dt + timedelta(minutes=service.duration),
+            "chaitanya_booking_method": post.get("booking_method") or "availability",
+            "chaitanya_is_gift": bool(post.get("is_gift")),
+            "chaitanya_gift_delivery_type": post.get("gift_delivery_type") or False,
+            "chaitanya_gift_recipient_email": post.get("gift_recipient_email"),
+            "chaitanya_gift_recipient_address": post.get("gift_recipient_address"),
+            "chaitanya_gift_message": post.get("gift_message"),
+            "chaitanya_notes": post.get("notes"),
         })
+ 
+        # 4. Redirect to cart — customer applies voucher code natively there
         return request.redirect("/shop/cart")
+ 
+
+    @http.route(['/shop/confirmation'], type='http', auth="public", website=True, sitemap=False)
+    def shop_payment_confirmation(self, **post):
+        sale_order_id = request.session.get("sale_last_order_id")
+        order = request.env["sale.order"].sudo().browse(sale_order_id) if sale_order_id else request.website.sale_get_order()
+
+        if order and order.exists():
+            order.sudo()._create_chaitanya_bookings_from_order()
+
+            return request.render("website_sale.confirmation", {
+                "order": order,
+                "website_sale_order": order,
+            })
+
+        return request.redirect("/shop")
+        
 
     @http.route("/booking/success/<string:booking_reference>", type="http", auth="public", website=True)
     def booking_success(self, booking_reference, **kwargs):
@@ -358,10 +367,14 @@ class ChaitanyaAppointmentController(http.Controller):
         line = request.env["sale.order.line"].sudo().browse(line_id)
 
         if line.exists() and line.order_id.id == order.id:
+            booking = getattr(line, "booking_id", False)
+            if booking and booking.exists() and booking.state == "reserved":
+                booking.action_cancel()
+
             order._cart_update(
                 product_id=line.product_id.id,
                 line_id=line.id,
-                set_qty=0,
+                set_qty=0,  
             )
 
         return request.redirect("/shop/cart")

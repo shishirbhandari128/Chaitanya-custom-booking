@@ -31,9 +31,15 @@
         "views/website_templates.xml",
         "views/cart_view.xml",
         "views/website_sale_inherit.xml",
-        "views/booking_cancel.xml",
+        # "views/booking_cancel.xml",
         "reports/booking_receipt_report.xml",
     ],
+    "assets": {
+        "web.assets_frontend": [
+            "chaitanya_booking_flow/static/src/css/booking.css",
+            "chaitanya_booking_flow/static/src/js/booking.js",
+        ],
+    },
     "application": True,
     "installable": True,
 }
