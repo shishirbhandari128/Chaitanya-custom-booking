@@ -1,0 +1,17 @@
+.ch-booking {
+    --ch-ink:        #1a1f1e;
+    --ch-muted:      #6b7775;
+    --ch-line:       #e2eae8;
+    --ch-accent:     #2a6b5f;
+    --ch-warm:       #faf9f6;
+
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ch-ink);
+    background: var(--ch-warm);
+}
+
+.ch-success {
+    max-width:760px;
+    padding-top:54px;
+    padding-bottom:64px;
+}

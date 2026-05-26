@@ -18,11 +18,18 @@ class ChaitanyaAppointmentService(models.Model):
     _name = "chaitanya.appointment.service"
     _description = "Chaitanya Service"
     _inherit = ["mail.thread", "mail.activity.mixin"]
-    _order = "category_id, sequence, name"
+    _order = "sequence, name"
 
     name = fields.Char(required=True, translate=True, tracking=True)
     sequence = fields.Integer(default=10)
-    category_id = fields.Many2one("chaitanya.appointment.service.category", required=True, ondelete="restrict", tracking=True)
+    category_id = fields.Many2many(
+        "chaitanya.appointment.service.category",
+        "chaitanya_service_category_rel",   # 👈 short table name
+        "service_id",                       # column for this model
+        "category_id",                      # column for related model
+        string="Categories",
+        tracking=True
+    )
     short_description = fields.Char(translate=True)
     description = fields.Html(translate=True)
     benefits = fields.Html(translate=True)

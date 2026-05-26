@@ -1,0 +1,90 @@
+/* ── Design Tokens ──────────────────────────────────────── */
+.ch-booking {
+    --ch-ink:        #1a1f1e;
+    --ch-muted:      #6b7775;
+    --ch-subtle:     #9eaaa8;
+    --ch-line:       #e2eae8;
+    --ch-line-soft:  #eef4f2;
+    --ch-accent:     #2a6b5f;
+    --ch-accent-dk:  #1e5045;
+    --ch-accent-lt:  #d6ede8;
+    --ch-accent-bg:  #f0f8f5;
+    --ch-warm:       #faf9f6;
+    --ch-white:      #ffffff;
+    --ch-gold:       #b89a6a;
+    --ch-shadow-sm:  0 1px 3px rgba(26,31,30,.06), 0 2px 8px rgba(26,31,30,.04);
+    --ch-shadow-md:  0 4px 16px rgba(26,31,30,.08), 0 1px 4px rgba(26,31,30,.06);
+    --ch-shadow-lg:  0 8px 32px rgba(26,31,30,.12), 0 2px 8px rgba(26,31,30,.06);
+    --ch-radius:     10px;
+    --ch-radius-lg:  14px;
+    --ch-transition: 220ms cubic-bezier(.4,0,.2,1);
+
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ch-ink);
+    background: var(--ch-warm);
+    -webkit-font-smoothing: antialiased;
+}
+
+.ch-booking .ch-flow-page {
+    max-width: 1200px;
+    padding-top: 0;
+    padding-bottom: 72px;
+}
+
+.ch-eyebrow {
+    display: inline-block;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 4px 14px;
+    color: rgba(255,255,255,.9);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.ch-lead {
+    font-size:1.15rem;
+    color:var(--ch-muted);
+}
+
+.ch-method-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    margin-top:24px
+}
+
+.ch-method-card {
+    display:block;
+    border:1px solid var(--ch-line);
+    border-radius:8px;
+    padding:18px;
+    background:#fff;
+    color:var(--ch-ink)
+}
+
+.ch-method-card:hover {
+    border-color:var(--ch-accent);
+    text-decoration:none
+}
+
+.ch-method-card strong {
+    display:block;
+    font-size:1.2rem;
+    margin-bottom:8px
+}
+
+.ch-method-card span {
+    display:block;
+    color:var(--ch-muted)
+}
+
+@media(max-width:768px){
+    .ch-method-grid{
+        grid-template-columns:1fr
+    }
+}

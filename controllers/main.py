@@ -178,7 +178,11 @@ class ChaitanyaAppointmentController(http.Controller):
             "id": provider.id,
             "name": provider.name,
             "specialization": provider.specialization or "",
-            "image_url": "/web/image/chaitanya.appointment.provider/%s/image" % provider.id,
+            "image_url": (
+                "data:image/png;base64,%s" % provider.image.decode()
+                if provider.image
+                else "/web/static/img/placeholder.png"
+            ),
             "nearest_time": nearest["label"],
             "nearest_date": nearest["value"][:10],
             "slots": all_slots,
@@ -260,8 +264,133 @@ class ChaitanyaAppointmentController(http.Controller):
     def _booking_error(self, message):
         request.session["booking_error"] = message
         return request.redirect("/booking")
-        
- 
+    
+    def _is_selected_slot_still_valid(self, service, provider, start_dt):
+        if not service.exists() or not provider.exists() or not start_dt:
+            return False
+
+        tz = self._booking_timezone()
+
+        start_local = pytz.utc.localize(start_dt).astimezone(tz)
+        selected_date = start_local.date()
+        selected_value = fields.Datetime.to_string(start_dt)
+
+        available_slots = self._get_provider_slots(service, provider, selected_date)
+
+        return any(slot["value"] == selected_value for slot in available_slots)
+
+    
+    
+    def _format_cart_slot_unavailable_message(self, unavailable_lines):
+        lines = ["Some booking slots are no longer available:"]
+
+        for item in unavailable_lines:
+            lines.append(
+                "- %s | %s | %s | %s"
+                % (
+                    item["service"],
+                    item["therapist"],
+                    item["date"],
+                    item["time"],
+                )
+            )
+
+        lines.append("")
+        lines.append("Please remove these items from your cart and choose another time.")
+
+        return "\n".join(lines)
+
+
+
+    @http.route("/booking/check_cart_slots", type="json", auth="public", website=True)
+    def check_cart_slots(self, **kwargs):
+        order = request.website.sale_get_order()
+
+        if not order:
+            return {
+                "valid": True,
+                "message": "",
+                "unavailable_lines": [],
+            }
+
+        tz = self._booking_timezone()
+        unavailable_lines = []
+
+        for line in order.order_line:
+            service = line.chaitanya_service_id
+            provider = line.chaitanya_provider_id
+            start_dt = line.chaitanya_start_datetime
+            end_dt = line.chaitanya_end_datetime
+
+            if not service or not provider or not start_dt:
+                continue
+
+            if not self._is_selected_slot_still_valid(service, provider, start_dt):
+                start_local = pytz.utc.localize(start_dt).astimezone(tz)
+                end_local = pytz.utc.localize(end_dt).astimezone(tz) if end_dt else False
+
+                unavailable_lines.append({
+                    "line_id": line.id,
+                    "service": service.name,
+                    "therapist": provider.name,
+                    "date": start_local.strftime("%d %b %Y"),
+                    "time": "%s - %s" % (
+                        start_local.strftime("%I:%M %p"),
+                        end_local.strftime("%I:%M %p") if end_local else "",
+                    ),
+                })
+
+        if unavailable_lines:
+            return {
+                "valid": False,
+                "message": self._format_cart_slot_unavailable_message(unavailable_lines),
+                "unavailable_lines": unavailable_lines,
+            }
+
+        return {
+            "valid": True,
+            "message": "",
+            "unavailable_lines": [],
+        }
+
+
+    def _is_slot_already_in_cart(self, order, provider, start_dt, end_dt):
+        if not order:
+            return False
+
+        for line in order.order_line:
+            if not line.chaitanya_provider_id:
+                continue
+
+            if line.chaitanya_provider_id.id != provider.id:
+                continue
+
+            line_start = line.chaitanya_start_datetime
+            line_end = line.chaitanya_end_datetime
+
+            if not line_start or not line_end:
+                continue
+
+            if line_start < end_dt and line_end > start_dt:
+                return True
+
+        return False
+    
+    @http.route()
+    def checkout(self, **post):
+        order = request.website.sale_get_order()
+
+        if order:
+            checker = ChaitanyaAppointmentController()
+            result = checker.check_cart_slots()
+
+            if not result.get("valid"):
+                request.session["booking_error"] = result.get("message")
+                return request.redirect("/shop/cart")
+
+        return super().checkout(**post)
+
+    
     @http.route("/booking/submit", type="http", auth="public", website=True, methods=["POST"], csrf=True)
     def submit_booking(self, **post):
  
@@ -286,19 +415,52 @@ class ChaitanyaAppointmentController(http.Controller):
             return self._booking_error("This service is not linked to a checkout product yet.")
  
         # 2. Check slot availability
-        booking_model = request.env["chaitanya.appointment.booking"].sudo()
-        if not booking_model._is_slot_available(service, provider, start_dt):
-            return self._booking_error("The selected slot is no longer available. Please choose another time.")
- 
-        # 3. Add service product to cart
+        # 2. Check selected slot against therapist schedule, off days, existing bookings, and cart
+        end_dt = start_dt + timedelta(minutes=service.duration)
+
+        if not self._is_selected_slot_still_valid(service, provider, start_dt):
+            return self._booking_error(
+                "The selected slot is no longer available. Please choose another time."
+            )
+
         order = request.website.sale_get_order(force_create=True)
-        cart_values = order._cart_update(
+
+        if not request.env.user._is_public():
+            partner = request.env.user.partner_id.commercial_partner_id
+
+            order.sudo().write({
+                "partner_id": partner.id,
+                "partner_invoice_id": partner.id,
+                "partner_shipping_id": partner.id,
+            })
+
+        if self._is_slot_already_in_cart(order, provider, start_dt, end_dt):
+            return self._booking_error(
+                "This therapist already has this time reserved in your cart."
+            )
+
+        # 3. Add service product to cart
+        cart_values = order.with_context(
+            chaitanya_force_new_booking_line=True
+        )._cart_update(
             product_id=service.product_id.id,
             add_qty=1,
         )
  
         line = request.env["sale.order.line"].sudo().browse(cart_values.get("line_id"))
+        tz = self._booking_timezone()
+        start_local = pytz.utc.localize(start_dt).astimezone(tz)
+        end_local = pytz.utc.localize(start_dt + timedelta(minutes=service.duration)).astimezone(tz)
+
+        booking_description = "%s\nTherapist: %s\nDate: %s\nTime: %s - %s" % (
+            service.name,
+            provider.name,
+            start_local.strftime("%d %b %Y"),
+            start_local.strftime("%I:%M %p"),
+            end_local.strftime("%I:%M %p"),
+        )
         line.write({
+            "name": booking_description,
             "chaitanya_service_id": service.id,
             "chaitanya_provider_id": provider.id,
             "chaitanya_start_datetime": start_dt,
@@ -315,7 +477,26 @@ class ChaitanyaAppointmentController(http.Controller):
         # 4. Redirect to cart — customer applies voucher code natively there
         return request.redirect("/shop/cart")
  
+    @http.route("/booking/check_slot_in_cart", type="json", auth="public", website=True)
+    def check_slot_in_cart(self, service_id, provider_id, start_datetime, **kwargs):
+        service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
+        provider = request.env["chaitanya.appointment.provider"].sudo().browse(int(provider_id or 0))
 
+        if not service.exists() or not provider.exists() or not start_datetime:
+            return {
+                "in_cart": False,
+            }
+
+        start_dt = fields.Datetime.from_string(start_datetime)
+        end_dt = start_dt + timedelta(minutes=service.duration)
+
+        order = request.website.sale_get_order()
+
+        return {
+            "in_cart": self._is_slot_already_in_cart(order, provider, start_dt, end_dt),
+            "message": "This time slot is already in your cart.",
+        }
+        
     @http.route(['/shop/confirmation'], type='http', auth="public", website=True, sitemap=False)
     def shop_payment_confirmation(self, **post):
         sale_order_id = request.session.get("sale_last_order_id")
@@ -330,7 +511,7 @@ class ChaitanyaAppointmentController(http.Controller):
             })
 
         return request.redirect("/shop")
-        
+            
 
     @http.route("/booking/success/<string:booking_reference>", type="http", auth="public", website=True)
     def booking_success(self, booking_reference, **kwargs):
@@ -339,23 +520,23 @@ class ChaitanyaAppointmentController(http.Controller):
             return request.not_found()
         return request.render("chaitanya_booking_flow.booking_success_page", {"booking": booking})
 
-    @http.route("/booking/download/<string:booking_reference>", type="http", auth="public", website=True)
-    def download_booking(self, booking_reference, **kwargs):
-        booking = request.env["chaitanya.appointment.booking"].sudo().search([("name", "=", booking_reference)], limit=1)
-        if not booking:
-            return request.not_found()
-        pdf, _content_type = request.env["ir.actions.report"].sudo()._render_qweb_pdf(
-            "chaitanya_booking_flow.action_report_booking_receipt",
-            [booking.id],
-        )
-        return request.make_response(
-            pdf,
-            headers=[
-                ("Content-Type", "application/pdf"),
-                ("Content-Length", len(pdf)),
-                ("Content-Disposition", 'attachment; filename="%s.pdf"' % booking.name),
-            ],
-        )
+    # @http.route("/booking/download/<string:booking_reference>", type="http", auth="public", website=True)
+    # def download_booking(self, booking_reference, **kwargs):
+    #     booking = request.env["chaitanya.appointment.booking"].sudo().search([("name", "=", booking_reference)], limit=1)
+    #     if not booking:
+    #         return request.not_found()
+    #     pdf, _content_type = request.env["ir.actions.report"].sudo()._render_qweb_pdf(
+    #         "chaitanya_booking_flow.action_report_booking_receipt",
+    #         [booking.id],
+    #     )
+    #     return request.make_response(
+    #         pdf,
+    #         headers=[
+    #             ("Content-Type", "application/pdf"),
+    #             ("Content-Length", len(pdf)),
+    #             ("Content-Disposition", 'attachment; filename="%s.pdf"' % booking.name),
+    #         ],
+    #     )
 
 
     @http.route("/booking/cart/remove/<int:line_id>", type="http", auth="public", website=True)

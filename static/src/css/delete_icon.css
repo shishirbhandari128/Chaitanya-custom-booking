@@ -1,0 +1,14 @@
+.o_cart_product {
+    position: relative;
+}
+
+.ch-cart-delete-icon {
+    color:#dc3545;
+    font-size:16px;
+    text-decoration:none;
+    margin-left:8px;
+}
+
+.ch-cart-delete-icon:hover {
+    color:#a71d2a;
+}

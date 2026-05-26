@@ -25,14 +25,37 @@ function setMessage(container, message, loading = false) {
 }
 
 function clearSelected(container) {
-    container.querySelectorAll(".is-selected").forEach(el => el.classList.remove("is-selected"));
+    container.querySelectorAll(".is-selected").forEach(el => {
+        el.classList.remove("is-selected");
+        const chooseBtn = el.querySelector(".ch-choose-btn");
+        if (chooseBtn) chooseBtn.textContent = "Choose";
+    });
+}
+
+function scrollToSection(target) {
+    if (!target) return;
+
+    const section = target.closest(".ch-panel-section") || target;
+
+    section.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+    });
+}
+
+function scrollToDateSection(form) {
+    scrollToSection(form.querySelector("#chAvailableDateSelect"));
+}
+
+function scrollToSlotSection(form) {
+    scrollToSection(form.querySelector("#chSlotCards"));
 }
 
 function resetBookingSelection(form) {
     form.querySelector("#chProviderId").value    = "";
     form.querySelector("#chStartDatetime").value = "";
     setMessage(form.querySelector("#chSlotCards"), "Choose a therapist to see times.");
-    // reset slots label
+
     const label = form.querySelector(".ch-slots-label");
     if (label) label.textContent = "Available Times";
 }
@@ -50,7 +73,6 @@ function renderSlotCards(form, slots) {
         return;
     }
 
-    // Update label with selected date context
     if (label) {
         const today = new Date().toISOString().slice(0, 10);
         const date  = form.querySelector("#chBookingDate")?.value
@@ -68,15 +90,26 @@ function renderSlotCards(form, slots) {
         btn.textContent = slot.label;
         btn.style.animationDelay = `${i * 35}ms`;
 
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
+            const result = await checkSlotInCart(form, slot.value);
+
+            if (result.in_cart) {
+                alert(result.message || "This time slot is already in your cart.");
+                return;
+            }
+
             startInput.value = slot.value;
             clearSelected(slotContainer);
             btn.classList.add("is-selected");
         });
-
         slotContainer.appendChild(btn);
     });
 }
+
+
+
+
+
 
 // ── Provider dates (therapist-first mode) ─────────────────
 async function loadProviderDates(form, providerId, preferredDate) {
@@ -85,7 +118,10 @@ async function loadProviderDates(form, providerId, preferredDate) {
 
     dateSelect.innerHTML = `<option value="">Loading dates…</option>`;
 
-    const dates = await rpc("/booking/get_provider_dates", {service_id: serviceId, provider_id: providerId});
+    const dates = await rpc("/booking/get_provider_dates", {
+        service_id: serviceId,
+        provider_id: providerId,
+    });
 
     if (!dates.length) {
         dateSelect.innerHTML = `<option value="">No available dates</option>`;
@@ -94,6 +130,7 @@ async function loadProviderDates(form, providerId, preferredDate) {
     }
 
     dateSelect.innerHTML = `<option value="">Choose date</option>`;
+
     dates.forEach(date => {
         const opt = document.createElement("option");
         opt.value       = date;
@@ -113,9 +150,17 @@ async function loadSlotsForProviderDate(form, providerId, date) {
         setMessage(form.querySelector("#chSlotCards"), "Choose a therapist and date.");
         return;
     }
+
     const serviceId = form.querySelector("[name='service_id']").value;
+
     setMessage(form.querySelector("#chSlotCards"), "Loading times…", true);
-    const slots = await rpc("/booking/get_provider_slots", {service_id: serviceId, provider_id: providerId, date});
+
+    const slots = await rpc("/booking/get_provider_slots", {
+        service_id: serviceId,
+        provider_id: providerId,
+        date,
+    });
+
     renderSlotCards(form, slots);
 }
 
@@ -136,8 +181,8 @@ function renderTherapistCards(form, therapists) {
     container.innerHTML = "";
 
     therapists.forEach((t, i) => {
-        const card    = document.createElement("button");
-        card.type     = "button";
+        const card = document.createElement("button");
+        card.type  = "button";
         card.className = "ch-therapist-card o_not_editable";
         card.setAttribute("contenteditable", "false");
         card.style.animationDelay = `${i * 60}ms`;
@@ -156,19 +201,34 @@ function renderTherapistCards(form, therapists) {
 
         card.addEventListener("click", async () => {
             form.querySelector("#chProviderId").value = t.id;
+
             clearSelected(container);
             card.classList.add("is-selected");
-            // Update Choose btn text
-            card.querySelector(".ch-choose-btn").textContent = "Selected ✓";
+
+            const chooseBtn = card.querySelector(".ch-choose-btn");
+            if (chooseBtn) chooseBtn.textContent = "Selected ✓";
 
             if (method === "availability") {
                 renderSlotCards(form, t.slots || []);
+                scrollToSlotSection(form);
             } else {
                 await loadProviderDates(form, t.id, t.nearest_date);
+                scrollToDateSection(form);
             }
         });
 
         container.appendChild(card);
+    });
+}
+// check time slot already in cart
+async function checkSlotInCart(form, startDatetime) {
+    const serviceId = form.querySelector("[name='service_id']").value;
+    const providerId = form.querySelector("#chProviderId").value;
+
+    return rpc("/booking/check_slot_in_cart", {
+        service_id: serviceId,
+        provider_id: providerId,
+        start_datetime: startDatetime,
     });
 }
 
@@ -183,11 +243,13 @@ async function loadTherapists(form) {
 
     if (method === "availability") {
         const date = form.querySelector("#chBookingDate").value;
+
         if (!date) {
             setMessage(form.querySelector("#chTherapistCards"), "Choose a date to see therapists.");
             setMessage(form.querySelector("#chSlotCards"), "Choose a therapist to see times.");
             return;
         }
+
         params.date = date;
     }
 
@@ -197,13 +259,13 @@ async function loadTherapists(form) {
 
 // ── Gift fields toggle ────────────────────────────────────
 function configureGiftFields(form) {
-    const isGift      = form.querySelector("#chIsGift").value === "1";
-    const giftCard    = form.querySelector("#chGiftFields");
+    const isGift       = form.querySelector("#chIsGift").value === "1";
+    const giftCard     = form.querySelector("#chGiftFields");
     const deliveryType = form.querySelector("#chGiftDeliveryType");
-    const emailWrap   = form.querySelector("#chGiftEmailWrap");
-    const addressWrap = form.querySelector("#chGiftAddressWrap");
-    const email       = form.querySelector("#chGiftRecipientEmail");
-    const address     = form.querySelector("#chGiftRecipientAddress");
+    const emailWrap    = form.querySelector("#chGiftEmailWrap");
+    const addressWrap  = form.querySelector("#chGiftAddressWrap");
+    const email        = form.querySelector("#chGiftRecipientEmail");
+    const address      = form.querySelector("#chGiftRecipientAddress");
 
     if (!giftCard) return;
 
@@ -216,6 +278,7 @@ function configureGiftFields(form) {
     }
 
     const online = deliveryType.value === "online";
+
     emailWrap.hidden   = !online;
     addressWrap.hidden = online;
     email.required     = online;
@@ -230,13 +293,12 @@ function setupPromoUI(form) {
 
     if (!applyBtn) return;
 
-    // Make the input actually editable (readonly was just for styling hint)
     input.removeAttribute("readonly");
 
     applyBtn.addEventListener("click", () => {
         const code = input.value.trim();
         if (!code) return;
-        // Show a friendly note — real validation happens on /shop/cart
+
         note.style.display = "block";
         note.style.color   = "var(--ch-accent)";
         note.textContent   = `Code "${code}" will be applied at checkout.`;
@@ -248,11 +310,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const form = getForm();
     if (!form) return;
 
-    const method        = getMethod(form);
-    const dateInputWrap = form.querySelector("#chDateInputWrap");
+    const method         = getMethod(form);
+    const dateInputWrap  = form.querySelector("#chDateInputWrap");
     const dateSelectWrap = form.querySelector("#chDateSelectWrap");
 
-    // Show correct date control
     if (method === "therapist") {
         dateInputWrap.hidden  = true;
         dateSelectWrap.hidden = false;
@@ -264,28 +325,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     configureGiftFields(form);
     setupPromoUI(form);
 
-    // Initial therapist load
     if (method === "therapist") {
         await loadTherapists(form);
     } else {
         setMessage(form.querySelector("#chTherapistCards"), "Choose a date to see therapists.");
     }
 
-    // Event listeners
-    form.querySelector("#chBookingDate")?.addEventListener("change", () => loadTherapists(form));
-
-    form.querySelector("#chAvailableDateSelect")?.addEventListener("change", () => {
-        const providerId = form.querySelector("#chProviderId").value;
-        const date       = form.querySelector("#chAvailableDateSelect").value;
-        loadSlotsForProviderDate(form, providerId, date);
+    form.querySelector("#chBookingDate")?.addEventListener("change", () => {
+        loadTherapists(form);
     });
 
-    form.querySelector("#chGiftDeliveryType")?.addEventListener("change", () => configureGiftFields(form));
+    form.querySelector("#chAvailableDateSelect")?.addEventListener("change", async () => {
+        const providerId = form.querySelector("#chProviderId").value;
+        const date       = form.querySelector("#chAvailableDateSelect").value;
 
-    // Submit guard
+        await loadSlotsForProviderDate(form, providerId, date);
+
+        if (date) {
+            scrollToSlotSection(form);
+        }
+    });
+
+    form.querySelector("#chGiftDeliveryType")?.addEventListener("change", () => {
+        configureGiftFields(form);
+    });
+
     form.addEventListener("submit", event => {
         const providerId    = form.querySelector("#chProviderId").value;
         const startDatetime = form.querySelector("#chStartDatetime").value;
+
         if (!providerId || !startDatetime) {
             event.preventDefault();
             setMessage(form.querySelector("#chSlotCards"), "⚠ Please choose a therapist and a time slot.");

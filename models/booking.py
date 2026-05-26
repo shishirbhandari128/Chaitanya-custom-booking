@@ -90,6 +90,18 @@ class ChaitanyaAppointmentBooking(models.Model):
 
         return super().create(vals_list)
 
+    def write(self, vals):
+        result = super().write(vals)
+
+        if vals.get("payment_status") == "paid":
+            for booking in self:
+                order = booking.sale_order_id
+
+                if order and order.exists() and order.state in ("draft", "sent"):
+                    order.sudo().action_confirm()
+
+        return result
+
     @api.constrains("start_datetime", "end_datetime")
     def _check_datetime_range(self):
         for booking in self:

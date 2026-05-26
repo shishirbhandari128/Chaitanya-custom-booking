@@ -3,6 +3,8 @@
               inherit_id="website_sale.cart_lines"
               name="Cart Booking Delete Button">
 
+              
+
         <!-- Replace desktop Remove text with trash icon -->
         <xpath expr="//div[@name='o_wsale_cart_line_button_container']/a[contains(@class, 'js_delete_product')]"
                position="replace">

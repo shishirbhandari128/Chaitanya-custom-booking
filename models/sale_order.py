@@ -118,8 +118,17 @@ class SaleOrder(models.Model):
         res = super().action_confirm()
         self._create_chaitanya_bookings_from_order()
         return res
+  
+    def _cart_find_product_line(self, product_id=None, line_id=None, **kwargs):
+        if self.env.context.get("chaitanya_force_new_booking_line"):
+            return self.env["sale.order.line"]
 
-
+        return super()._cart_find_product_line(
+            product_id=product_id,
+            line_id=line_id,
+            **kwargs
+        )
+ 
 
 
 # from odoo import fields, models
