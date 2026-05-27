@@ -8,3 +8,7 @@ access_chaitanya_schedule_slot_user,chaitanya.schedule.slot.user,model_chaitanya
 
 access_chaitanya_appointment_booking,access_chaitanya_appointment_booking,model_chaitanya_appointment_booking,base.group_user,1,1,1,1
 access_chaitanya_appointment_voucher,access_chaitanya_appointment_voucher,model_chaitanya_appointment_voucher,base.group_user,1,1,1,1
+
+access_chaitanya_service_attribute,chaitanya.service.attribute,model_chaitanya_service_attribute,base.group_user,1,1,1,1
+access_chaitanya_service_attribute_value,chaitanya.service.attribute.value,model_chaitanya_service_attribute_value,base.group_user,1,1,1,1
+access_chaitanya_service_attribute_line,chaitanya.service.attribute.line,model_chaitanya_service_attribute_line,base.group_user,1,1,1,1

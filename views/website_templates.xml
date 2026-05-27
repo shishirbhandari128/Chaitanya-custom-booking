@@ -61,25 +61,20 @@
             <link rel="stylesheet" href="/chaitanya_booking_flow/static/src/css/booking_select.css"/>
 
             <div id="wrap" class="ch-booking">
-
-                <section id="ch_hero_bg"
-                        class="ch-booking-header"
-                        data-name="Hero Header">
-
-                    <div class="ch-hero-image-layer oe_structure"
-                        id="ch_booking_hero_image">
+                <section id="ch_hero_bg" class="ch-booking-header" data-name="Hero Header">
+                    <div class="ch-hero-image-layer oe_structure" id="ch_booking_hero_image">
                         <section class="s_cover ch-hero-cover"
                                 data-snippet="s_cover"
                                 data-name="Booking Hero Image"
                                 style="background-image: url('/chaitanya_booking_flow/static/src/img/booking-hero.jpg');">
                         </section>
                     </div>
+
                     <div class="ch-header-overlay"/>
 
                     <div class="ch-header-content">
                         <div class="container">
                             <div class="oe_structure" id="ch_booking_hero_text">
-
                                 <a t-att-href="'/booking/start/%s?gift=%s' % (service.id, is_gift and 1 or 0)"
                                 class="ch-back-link">Booking preference</a>
 
@@ -89,13 +84,10 @@
                                 </div>
 
                                 <h1 class="ch-header-title">Choose Your Therapist &amp; Time</h1>
-
                                 <p class="ch-header-service-name" t-out="service.name"/>
-
                             </div>
                         </div>
                     </div>
-
                 </section>
 
                 <section class="container ch-flow-page">
@@ -108,15 +100,12 @@
                         <input type="hidden" name="start_datetime" id="chStartDatetime"/>
 
                         <div class="ch-booking-shell">
-
-                            <!-- LEFT: Main form panel -->
                             <div class="ch-form-panel">
 
-                                <!-- Availability mode: date first -->
                                 <t t-if="booking_method == 'availability'">
-                                    <div class="ch-panel-section">
-                                        <div class="ch-section-header ">
-                                            <h2 class="ch-section-title">Select a Therapist</h2>
+                                    <div class="ch-panel-section" id="chDateSection">
+                                        <div class="ch-section-header">
+                                            <h2 class="ch-section-title">Select Date</h2>
                                         </div>
 
                                         <div id="chDateInputWrap">
@@ -131,31 +120,55 @@
                                             </select>
                                         </div>
                                     </div>
+
+                                    <div class="ch-panel-section" id="chSlotSection">
+                                        <div class="ch-section-header">
+                                            <div class="oe_structure" id="ch_pick_time_title">
+                                                <h2 class="ch-section-title">Pick a Time Slot</h2>
+                                            </div>
+                                        </div>
+
+                                        <p class="ch-slots-label">Available Times</p>
+
+                                        <div id="chSlotCards" class="ch-slot-card-grid">
+                                            <p class="ch-empty-state">Choose a date to see available times.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="ch-panel-section" id="chTherapistSection">
+                                        <div class="ch-section-header">
+                                            <h2 class="ch-section-title">Select a Therapist</h2>
+                                        </div>
+
+                                        <div id="chTherapistCards"
+                                            class="ch-therapist-card-grid o_not_editable"
+                                            contenteditable="false">
+                                            <p class="ch-empty-state">Choose a time slot to see therapists.</p>
+                                        </div>
+                                    </div>
                                 </t>
 
-                                <!-- Therapist cards -->
-                                <div class="ch-panel-section">
-                                    <div class="ch-section-header">
-                                        <h2 class="ch-section-title">Select a Therapist</h2>
-                                    </div>
-
-                                    <div id="chTherapistCards"
-                                        class="ch-therapist-card-grid o_not_editable"
-                                        contenteditable="false">
-                                        <p class="ch-empty-state is-loading">Loading therapists…</p>
-                                    </div>
-                                </div>
-
-                                <!-- Therapist mode: date after therapist -->
                                 <t t-if="booking_method == 'therapist'">
-                                    <div class="ch-panel-section">
+                                    <div class="ch-panel-section" id="chTherapistSection">
+                                        <div class="ch-section-header">
+                                            <h2 class="ch-section-title">Select a Therapist</h2>
+                                        </div>
+
+                                        <div id="chTherapistCards"
+                                            class="ch-therapist-card-grid o_not_editable"
+                                            contenteditable="false">
+                                            <p class="ch-empty-state is-loading">Loading therapists...</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="ch-panel-section" id="chDateSection">
                                         <div class="ch-section-header">
                                             <div class="oe_structure" id="ch_pick_date_title">
                                                 <h2 class="ch-section-title">Select Date</h2>
                                             </div>
                                         </div>
 
-                                        <div id="chDateInputWrap">
+                                        <div id="chDateInputWrap" hidden="hidden">
                                             <span class="ch-date-label">Preferred Date</span>
                                             <input type="date" id="chBookingDate" style="max-width:220px;"/>
                                         </div>
@@ -167,28 +180,25 @@
                                             </select>
                                         </div>
                                     </div>
-                                </t>
 
-                                <!-- Time slots -->
-                                <div class="ch-panel-section">
-                                    <div class="ch-section-header">
-                                        <div class="oe_structure" id="ch_pick_time_title">
-                                            <h2 class="ch-section-title">Pick a Time Slot</h2>
+                                    <div class="ch-panel-section" id="chSlotSection">
+                                        <div class="ch-section-header">
+                                            <div class="oe_structure" id="ch_pick_time_title">
+                                                <h2 class="ch-section-title">Pick a Time Slot</h2>
+                                            </div>
+                                        </div>
+
+                                        <p class="ch-slots-label">Available Times Today</p>
+
+                                        <div id="chSlotCards" class="ch-slot-card-grid">
+                                            <p class="ch-empty-state">Choose a therapist to see times.</p>
                                         </div>
                                     </div>
-
-                                    <p class="ch-slots-label">Available Times Today</p>
-
-                                    <div id="chSlotCards" class="ch-slot-card-grid">
-                                        <p class="ch-empty-state">Choose a therapist to see times.</p>
-                                    </div>
-                                </div>
+                                </t>
 
                             </div>
 
-                            <!-- RIGHT: Sidebar -->
                             <div class="ch-sidebar">
-
                                 <div class="ch-order-summary">
                                     <div class="ch-order-summary-head">
                                         <h3>Order Summary</h3>
@@ -247,7 +257,7 @@
                                         <label>Gift Message</label>
                                         <textarea name="gift_message"
                                                 rows="3"
-                                                placeholder="Write a special message…"/>
+                                                placeholder="Write a special message..."/>
                                     </div>
                                 </div>
 
@@ -261,13 +271,11 @@
 
                                     <div class="oe_structure" id="ch_select_cta">
                                         <button type="submit" class="ch-submit-btn">
-                                            add to Cart Proceed to Checkout
+                                            Add to Cart Proceed to Checkout
                                         </button>
                                     </div>
                                 </div>
-
                             </div>
-
                         </div>
                     </form>
                 </section>

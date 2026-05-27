@@ -13,25 +13,36 @@
                 parent="menu_chaitanya_booking_root"
                 action="action_chaitanya_booking"
                 sequence="10"/>
-
-        <!-- SERVICES -->
-        <menuitem id="menu_chaitanya_booking_services"
-                name="Services"
-                parent="menu_chaitanya_booking_root"
-                action="action_chaitanya_service"
-                sequence="20"/>
-
-        <menuitem id="menu_chaitanya_booking_categories"
-                name="Service Categories"
-                parent="menu_chaitanya_booking_root"
-                action="action_chaitanya_service_category"
-                sequence="30"/>
-
         <!-- PROVIDERS -->
         <menuitem id="menu_chaitanya_booking_providers"
                 name="Therapists"
                 parent="menu_chaitanya_booking_root"
                 action="action_chaitanya_provider"
+                sequence="30"/>
+
+        <!-- SERVICES -->
+         <menuitem id="menu_chaitanya_booking_services_group"
+                name="Services Group"
+                parent="menu_chaitanya_booking_root"
+                sequence="50"/>
+
+        <menuitem id="menu_chaitanya_booking_services"
+                name="Create service"
+                parent="menu_chaitanya_booking_services_group"
+                action="action_chaitanya_service"
+                sequence="20"/>
+
+        <menuitem id="menu_chaitanya_booking_attributes"
+                name="Create service variants"
+                parent="menu_chaitanya_booking_services_group"
+                action="action_chaitanya_service_attribute"
+                sequence="20"/>
+
+        
+        <menuitem id="menu_chaitanya_booking_categories"
+                name="Service Categories"
+                parent="menu_chaitanya_booking_root"
+                action="action_chaitanya_service_category"
                 sequence="40"/>
 
         <!-- ===================================================== -->

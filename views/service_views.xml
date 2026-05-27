@@ -15,14 +15,25 @@
             </list>
         </field>
     </record>
+
     <record id="view_chaitanya_service_form" model="ir.ui.view">
         <field name="name">chaitanya.appointment.service.form</field>
         <field name="model">chaitanya.appointment.service</field>
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_ensure_checkout_product" string="Create/Sync Checkout Product" type="object"/>
+                    <button name="action_ensure_checkout_product"
+                            type="object"
+                            string="Sync Product"
+                            class="btn-secondary"/>
+
+                    <button name="action_open_checkout_product"
+                            type="object"
+                            string="Open Product"
+                            class="btn-primary"
+                            invisible="not product_tmpl_id"/>
                 </header>
+
                 <sheet>
                     <group>
                         <group>
@@ -32,37 +43,173 @@
                             <field name="short_description"/>
                             <field name="duration"/>
                             <field name="price"/>
-                            <field name="product_id" readonly="1"/>
                             <field name="currency_id"/>
                             <field name="allow_gift"/>
                             <field name="website_published"/>
                             <field name="active"/>
-                            <!-- <field name="public_categ_ids" widget="many2many_tags"/> -->
-
                         </group>
+
                         <group>
                             <field name="image" widget="image"/>
+                            <field name="product_tmpl_id" readonly="1"/>
+                            <field name="product_id" readonly="1"/>
                         </group>
                     </group>
+
                     <notebook>
                         <page string="Therapists">
                             <field name="provider_ids" widget="many2many_tags"/>
                         </page>
+
+                        <page string="Service Options">
+                            <field name="attribute_line_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="attribute_id"/>
+                                    <field name="value_ids"
+                                           widget="many2many_tags"
+                                           domain="[('attribute_id', '=', attribute_id)]"/>
+                                    <field name="product_attribute_line_id" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+
                         <page string="Description">
                             <field name="description"/>
                         </page>
+
                         <page string="Benefits">
                             <field name="benefits"/>
                         </page>
                     </notebook>
                 </sheet>
+
                 <chatter/>
             </form>
         </field>
     </record>
+
     <record id="action_chaitanya_service" model="ir.actions.act_window">
         <field name="name">Services</field>
         <field name="res_model">chaitanya.appointment.service</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>
+
+
+
+<!-- <?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_chaitanya_service_list" model="ir.ui.view">
+        <field name="name">chaitanya.appointment.service.list</field>
+        <field name="model">chaitanya.appointment.service</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="category_id" widget="many2many_tags"/>
+                <field name="duration"/>
+                <field name="price"/>
+                <field name="website_published"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_chaitanya_service_form" model="ir.ui.view">
+        <field name="name">chaitanya.appointment.service.form</field>
+        <field name="model">chaitanya.appointment.service</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_ensure_checkout_product"
+                            type="object"
+                            string="Sync Product"
+                            class="btn-secondary"/>
+
+                    <button name="action_open_checkout_product"
+                            type="object"
+                            string="Open Product"
+                            class="btn-primary"
+                            invisible="not product_tmpl_id"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="category_id" widget="many2many_tags"/>
+                            <field name="short_description"/>
+                            <field name="duration"/>
+                            <field name="price"/>
+                            <field name="currency_id"/>
+                            <field name="allow_gift"/>
+                            <field name="website_published"/>
+                            <field name="active"/>
+                        </group>
+
+                        <group>
+                            <field name="image" widget="image"/>
+                            <field name="product_tmpl_id" readonly="1"/>
+                            <field name="product_id" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Therapists">
+                            <field name="provider_ids" widget="many2many_tags"/>
+                        </page>
+
+                        <page string="Service Options">
+                            <field name="option_line_ids">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="attribute_id" readonly="1"/>
+                                </list>
+
+                                <form>
+                                    <sheet>
+                                        <group>
+                                            <field name="name"/>
+                                            <field name="sequence"/>
+                                            <field name="attribute_id" readonly="1"/>
+                                        </group>
+
+                                        <field name="value_line_ids">
+                                            <list editable="bottom">
+                                                <field name="sequence" widget="handle"/>
+                                                <field name="name"/>
+                                                <field name="price_extra"/>
+                                                <field name="attribute_value_id" readonly="1"/>
+                                            </list>
+                                        </field>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+
+                        <page string="Description">
+                            <field name="description"/>
+                        </page>
+
+                        <page string="Benefits">
+                            <field name="benefits"/>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_chaitanya_service" model="ir.actions.act_window">
+        <field name="name">Services</field>
+        <field name="res_model">chaitanya.appointment.service</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo> -->
+
+

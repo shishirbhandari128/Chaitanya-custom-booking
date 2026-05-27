@@ -21,6 +21,7 @@
         # "views/website_menu.xml",
         "data/sequence.xml",
         "views/service_category_views.xml",
+        "views/attribute.xml",
         "views/service_views.xml",
         "views/provider_views.xml",
         "views/working_day_views.xml",

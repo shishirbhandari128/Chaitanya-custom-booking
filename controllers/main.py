@@ -148,6 +148,68 @@ class ChaitanyaAppointmentController(http.Controller):
                         current += timedelta(minutes=slot.slot_interval or 30)
 
         return sorted(slots, key=lambda s: s["value"])
+    
+    def _provider_base_card(self, provider):
+        return {
+            "id": provider.id,
+            "name": provider.name,
+            "specialization": provider.specialization or "",
+            "image_url": (
+                "data:image/png;base64,%s" % provider.image.decode()
+                if provider.image
+                else "/web/static/img/placeholder.png"
+            ),
+        }
+
+
+    def _get_available_times_for_service_date(self, service, date_value):
+        if isinstance(date_value, str):
+            date_value = fields.Date.from_string(date_value)
+
+        if not service.exists():
+            return []
+
+        providers = service.provider_ids.filtered(lambda p: p.active and p.is_active_for_booking)
+
+        slots_by_value = {}
+
+        for provider in providers:
+            slots = self._get_provider_slots(service, provider, date_value)
+
+            for slot in slots:
+                if slot["value"] not in slots_by_value:
+                    slots_by_value[slot["value"]] = {
+                        "value": slot["value"],
+                        "label": slot["label"],
+                        "provider_count": 0,
+                    }
+
+                slots_by_value[slot["value"]]["provider_count"] += 1
+
+        return sorted(slots_by_value.values(), key=lambda s: s["value"])
+
+
+    def _provider_card_for_slot(self, service, provider, start_dt):
+        if not self._is_selected_slot_still_valid(service, provider, start_dt):
+            return False
+
+        return self._provider_base_card(provider)
+
+
+    def _get_providers_for_service_slot(self, service, start_dt):
+        if not service.exists() or not start_dt:
+            return []
+
+        providers = service.provider_ids.filtered(lambda p: p.active and p.is_active_for_booking)
+
+        cards = []
+
+        for provider in providers:
+            card = self._provider_card_for_slot(service, provider, start_dt)
+            if card:
+                cards.append(card)
+
+        return sorted(cards, key=lambda p: p["name"].lower())
 
 
     def _provider_card(self, service, provider, date_value=False):
@@ -205,6 +267,27 @@ class ChaitanyaAppointmentController(http.Controller):
             "booking_method": method,
             "is_gift": is_gift,
         })
+
+    @http.route("/booking/get_available_times", type="json", auth="public", website=True)
+    def get_available_times(self, service_id, date, **kwargs):
+        service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
+
+        if not date:
+            return []
+
+        return self._get_available_times_for_service_date(service, date)
+
+
+    @http.route("/booking/get_therapists_for_slot", type="json", auth="public", website=True)
+    def get_therapists_for_slot(self, service_id, start_datetime, **kwargs):
+        service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
+
+        if not start_datetime:
+            return []
+
+        start_dt = fields.Datetime.from_string(start_datetime)
+
+        return self._get_providers_for_service_slot(service, start_dt)
 
     # @http.route("/booking/select/<int:service_id>/<string:method>", type="http", auth="public", website=True)
     # def booking_select(self, service_id, method, gift="0", **kwargs):
