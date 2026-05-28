@@ -88,7 +88,7 @@ class ChaitanyaAppointmentService(models.Model):
     def create(self, vals_list):
         services = super().create(vals_list)
         services._ensure_checkout_product()
-        services.option_line_ids.sync_to_product_attributes()
+        services.attribute_line_ids.sync_to_product_template()
         return services
 
     def write(self, vals):
@@ -116,7 +116,7 @@ class ChaitanyaAppointmentService(models.Model):
     def action_ensure_checkout_product(self):
         self._ensure_checkout_product()
         self._sync_checkout_product()
-        self.option_line_ids.sync_to_product_attributes()
+        self.attribute_line_ids.sync_to_product_template()
         return True
 
     def action_open_checkout_product(self):

@@ -18,16 +18,15 @@
 
                     <!-- Dynamic service info — NOT editable -->
                     <p class="ch-lead">
-                        <t t-out="service.name"/> · 
-                        <t t-out="service.currency_id.symbol"/>
-                        <t t-out="service.price"/>
+                        <t t-out="selected_product.display_name if selected_product else 'None'"/>
+                        <t t-out="selected_product.lst_price if selected_product else service.price"/>
                     </p>
 
            
                     <div class="ch-method-grid">
 
                         <a class="ch-method-card"
-                           t-att-href="'/booking/select/%s/therapist?gift=%s' % (service.id, is_gift and 1 or 0)">
+                           t-att-href="'/booking/select/%s/therapist?gift=%s&amp;product_id=%s' % (service.id, is_gift and 1 or 0, product_id or '')">
                             <div class="oe_structure" id="ch_start_card_therapist">
                                 <strong>Book by Therapist</strong>
                                 <span>Choose a therapist first, then pick from their available dates and times.</span>
@@ -35,7 +34,7 @@
                         </a>
 
                         <a class="ch-method-card"
-                           t-att-href="'/booking/select/%s/availability?gift=%s' % (service.id, is_gift and 1 or 0)">
+                           t-att-href="'/booking/select/%s/availability?gift=%s&amp;product_id=%s' % (service.id, is_gift and 1 or 0, product_id or '')">
                             <div class="oe_structure" id="ch_start_card_availability">
                                 <strong>Book by Availability</strong>
                                 <span>Choose a preferred date first, then see therapists with open slots.</span>
@@ -98,6 +97,7 @@
                         <input type="hidden" name="is_gift" id="chIsGift" t-att-value="is_gift and 1 or 0"/>
                         <input type="hidden" name="provider_id" id="chProviderId"/>
                         <input type="hidden" name="start_datetime" id="chStartDatetime"/>
+                        <input type="hidden" name="product_id" t-att-value="product_id or service.product_id.id"/>
 
                         <div class="ch-booking-shell">
                             <div class="ch-form-panel">
@@ -213,13 +213,14 @@
 
                                         <div class="ch-order-row">
                                             <span>Duration</span>
-                                            <span><t t-out="service.duration"/> min</span>
+                                            <span><t t-out="selected_product.display_name if selected_product else 'service.duration'"/></span>
                                         </div>
 
                                         <div class="ch-order-row is-total" id="chPriceBox">
                                             <span>Total Price</span>
                                             <strong class="ch-order-price">
-                                                <t t-out="service.currency_id.symbol"/><t t-out="service.price"/>
+                                                <t t-out="selected_product.currency_id.symbol if selected_product else service.currency_id.symbol"/><t t-out="selected_product.lst_price if selected_product else service.price"/>
+                                                
                                             </strong>
                                         </div>
                                     </div>

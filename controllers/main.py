@@ -66,17 +66,29 @@ class ChaitanyaAppointmentController(http.Controller):
     #     return request.render("chaitanya_booking_flow.service_detail_page", {"service": service})
 
     @http.route("/booking/start/<int:service_id>", type="http", auth="public", website=True, page=True)
-    def booking_start(self, service_id, gift="0", **kwargs):
+    def booking_start(self, service_id, gift="0", product_id=False, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
+
         if not service.exists() or not service.active or not service.website_published:
             return request.not_found()
+
         is_gift = gift in ("1", "true", "True")
         if is_gift and not service.allow_gift:
             return request.not_found()
-        return request.render(
-            "chaitanya_booking_flow.booking_start_page",
-            {"service": service, "is_gift": is_gift},
-        )
+
+        product = service.product_id
+
+        if product_id:
+            selected_product = request.env["product.product"].sudo().browse(int(product_id))
+            if selected_product.exists() and selected_product.product_tmpl_id.id == service.product_tmpl_id.id:
+                product = selected_product
+
+        return request.render("chaitanya_booking_flow.booking_start_page", {
+            "service": service,
+            "is_gift": is_gift,
+            "product_id": product.id if product else False,
+            "selected_product": product,
+        })
 
     def _booking_timezone(self):
         tz_name = (
@@ -251,7 +263,7 @@ class ChaitanyaAppointmentController(http.Controller):
         }
 
     @http.route("/booking/select/<int:service_id>/<string:method>", type="http", auth="public", website=True)
-    def booking_select(self, service_id, method, gift="0", **kwargs):
+    def booking_select(self, service_id, method, gift="0", product_id=False, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
 
         if method not in ("therapist", "availability"):
@@ -262,10 +274,19 @@ class ChaitanyaAppointmentController(http.Controller):
 
         is_gift = gift in ("1", "true", "True")
 
+        product = service.product_id
+
+        if product_id:
+            selected_product = request.env["product.product"].sudo().browse(int(product_id))
+            if selected_product.exists() and selected_product.product_tmpl_id.id == service.product_tmpl_id.id:
+                product = selected_product
+
         return request.render("chaitanya_booking_flow.booking_select_page", {
             "service": service,
             "booking_method": method,
             "is_gift": is_gift,
+            "product_id": product.id if product else False,
+            "selected_product": product,
         })
 
     @http.route("/booking/get_available_times", type="json", auth="public", website=True)
@@ -494,8 +515,12 @@ class ChaitanyaAppointmentController(http.Controller):
             return self._booking_error("The selected therapist is not available for this service.")
  
         service._ensure_checkout_product()
-        if not service.product_id:
-            return self._booking_error("This service is not linked to a checkout product yet.")
+
+        product_id = int(post.get("product_id") or service.product_id.id)
+        product = request.env["product.product"].sudo().browse(product_id)
+
+        if not product.exists() or product.product_tmpl_id.id != service.product_tmpl_id.id:
+            return self._booking_error("Please choose a valid service option.")
  
         # 2. Check slot availability
         # 2. Check selected slot against therapist schedule, off days, existing bookings, and cart
@@ -526,7 +551,7 @@ class ChaitanyaAppointmentController(http.Controller):
         cart_values = order.with_context(
             chaitanya_force_new_booking_line=True
         )._cart_update(
-            product_id=service.product_id.id,
+            product_id=product.id,  
             add_qty=1,
         )
  

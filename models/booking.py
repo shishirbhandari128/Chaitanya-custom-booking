@@ -22,6 +22,16 @@ class ChaitanyaAppointmentBooking(models.Model):
         readonly=False,
     )
 
+    product_id = fields.Many2one("product.product", string="Product Variant", readonly=True, copy=False)
+    product_template_id = fields.Many2one(
+        "product.template",
+        string="Product",
+        related="product_id.product_tmpl_id",
+        store=True,
+        readonly=True,
+    )
+    product_variant_description = fields.Char(string="Selected Variant", readonly=True, copy=False)
+
     partner_id = fields.Many2one("res.partner", string="Customer")
     customer_name = fields.Char()
     customer_email = fields.Char()

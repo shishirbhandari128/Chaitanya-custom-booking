@@ -38,6 +38,7 @@
     "assets": {
         "web.assets_frontend": [
             "chaitanya_booking_flow/static/src/js/checkout_card_slot_check.js",
+            "chaitanya_booking_flow/static/src/js/variant_select.js",
             "chaitanya_booking_flow/static/src/css/delete_icon.css",    
         ],
     },

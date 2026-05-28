@@ -11,27 +11,44 @@
             <!-- Insert booking buttons before default add-to-cart block -->
             <xpath expr="//div[@id='add_to_cart_wrap']" position="before">
                 <t t-if="product.is_booking_service and product.appointment_service_id">
-                    <div id="booking_actions_wrap"
-                         class="d-flex align-items-center mb-2 me-auto gap-2">
 
-                        <a role="button"
-                           id="custom_book_now_button"
-                           class="btn btn-primary"
-                           t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=0">
-                            Book Now
-                        </a>
+                    <div id="booking_service_actions_block"
+                        class="d-flex flex-column align-items-start w-100 mb-3">
 
-                        <t t-if="product.allow_gift">
+                        <div id="booking_actions_wrap"
+                            class="d-flex align-items-center gap-2 mb-3">
+
                             <a role="button"
-                               id="gift_now_button"
-                               class="btn btn-outline-primary"
-                               t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=1">
-                                <i class="fa fa-gift me-1"/>
-                                Gift Now
+                            id="custom_book_now_button"
+                            class="btn btn-primary"
+                            t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=0&amp;product_id=#{product.id}">
+                                Book Now
                             </a>
+
+                            <t t-if="product.allow_gift">
+                                <a role="button"
+                                id="gift_now_button"
+                                class="btn btn-outline-primary"
+                                t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=1">
+                                    <i class="fa fa-gift me-1"/>
+                                    Gift Now
+                                </a>
+                            </t>
+
+                        </div>
+                        <p id="debug_product_id"></p>
+
+                        <t t-if="not product.attribute_line_ids.filtered(lambda l: l.attribute_id.name.lower() == 'duration')">
+                            <div class="ch-product-duration-info">
+                                <strong>Duration</strong>
+                                <span>
+                                    <t t-out="product.appointment_service_id.duration"/> min
+                                </span>
+                            </div>
                         </t>
 
                     </div>
+
                 </t>
             </xpath>
 
@@ -39,9 +56,11 @@
             <xpath expr="//div[@id='add_to_cart_wrap']" position="attributes">
                 <attribute name="t-if">not product.is_booking_service</attribute>
             </xpath>
+            
 
         </field>
     </record>
+    
 
 
     <!-- Hide quantity counter for booking service products -->

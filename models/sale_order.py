@@ -54,6 +54,55 @@ class SaleOrder(models.Model):
 
         return "pending"
 
+    def _get_chaitanya_booking_line_amounts(self, booking_lines):
+        self.ensure_one()
+        currency = self.currency_id
+
+        positive_lines = self.order_line.filtered(
+            lambda line: not line.display_type
+            and line.price_subtotal > 0
+            and not getattr(line, "is_delivery", False)
+        )
+
+        reward_lines = self.order_line.filtered(
+            lambda line: not line.display_type
+            and line.price_subtotal < 0
+        )
+
+        total_reward_discount = abs(sum(reward_lines.mapped("price_subtotal")))
+        positive_subtotal = sum(positive_lines.mapped("price_subtotal"))
+
+        amounts_by_line = {}
+
+        for line in booking_lines:
+            base_amount = currency.round(line.price_unit * line.product_uom_qty)
+
+            direct_discount = currency.round(
+                max(base_amount - line.price_subtotal, 0.0)
+            )
+
+            allocated_reward_discount = 0.0
+            if total_reward_discount and positive_subtotal:
+                allocated_reward_discount = currency.round(
+                    total_reward_discount * (line.price_subtotal / positive_subtotal)
+                )
+
+            discount_amount = currency.round(
+                direct_discount + allocated_reward_discount
+            )
+
+            final_amount = currency.round(
+                max(base_amount - discount_amount, 0.0)
+            )
+
+            amounts_by_line[line.id] = {
+                "base_amount": base_amount,
+                "discount_amount": discount_amount,
+                "final_amount": final_amount,
+            }
+
+        return amounts_by_line
+
     def _create_chaitanya_bookings_from_order(self):
         Booking = self.env["chaitanya.appointment.booking"].sudo()
 
@@ -68,6 +117,8 @@ class SaleOrder(models.Model):
                 and not line.booking_id
             )
 
+            amounts_by_line = order._get_chaitanya_booking_line_amounts(booking_lines)
+
             for line in booking_lines:
                 service = line.chaitanya_service_id
                 provider = line.chaitanya_provider_id
@@ -79,14 +130,16 @@ class SaleOrder(models.Model):
                         % service.name
                     )
 
-                amounts = Booking.prepare_amounts(
-                    service,
-                    line.chaitanya_voucher_id,
-                    order.partner_id,
-                )
+                amounts = amounts_by_line.get(line.id, {
+                    "base_amount": line.price_unit * line.product_uom_qty,
+                    "discount_amount": 0.0,
+                    "final_amount": line.price_subtotal,
+                })
 
                 booking = Booking.create({
                     "service_id": service.id,
+                    "product_id": line.product_id.id,
+                    "product_variant_description": line.product_id.display_name,
                     "provider_id": provider.id,
                     "partner_id": order.partner_id.id,
                     "customer_name": order.partner_id.name,
@@ -118,7 +171,7 @@ class SaleOrder(models.Model):
         res = super().action_confirm()
         self._create_chaitanya_bookings_from_order()
         return res
-  
+
     def _cart_find_product_line(self, product_id=None, line_id=None, **kwargs):
         if self.env.context.get("chaitanya_force_new_booking_line"):
             return self.env["sale.order.line"]
@@ -128,7 +181,6 @@ class SaleOrder(models.Model):
             line_id=line_id,
             **kwargs
         )
- 
 
 
 # from odoo import fields, models
