@@ -29,13 +29,54 @@
             <form>
                 <header>
                     <button name="action_cancel"
-                            string="Cancel"
+                            string="Cancel This Booking"
                             type="object"
                             invisible="state == 'cancelled'"/>
 
                     <field name="state"
                            widget="statusbar"
                            statusbar_visible="reserved,cancelled"/>
+                    
+                    <button name="action_view_sale_order"
+                            string="View Sale Order"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'cancelled' or not sale_order_id"/>
+
+                    <button name="action_confirm_sale_order"
+                            string="Confirm Entire Order"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state == 'cancelled' or not sale_order_id or sale_order_state not in ('draft', 'sent')"/>
+
+                    <button name="action_create_invoice"
+                            string="Create Invoice"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state == 'cancelled' or not sale_order_id or invoice_count != 0"/>
+
+                    <button name="action_view_invoices"
+                            string="View Invoices"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'cancelled' or invoice_count == 0"/>
+
+                    <button name="action_sync_payment_status"
+                            string="Sync Payment"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="invoice_count == 0"/>
+                    <button name="action_view_related_order_bookings"
+                            string="Related Bookings"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not sale_order_id"/>
+
+                    <button name="action_cancel_entire_order"
+                            string="Cancel Entire Order"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not sale_order_id or sale_order_state == 'cancel'"/>
                 </header>
 
                 <sheet>
@@ -72,6 +113,15 @@
                             <field name="base_amount"/>
                             <field name="discount_amount"/>
                             <field name="final_amount"/>
+                            <field name="active_amount"/>
+                            <field name="refunded_amount"/>
+                            <field name="net_amount"/>
+                            <field name="sale_order_state"/>
+                            <field name="sale_order_amount_total"/>
+                            <field name="invoice_status"/>
+                            <field name="invoice_count"/>
+                            <field name="invoice_amount_total"/>
+                            <field name="invoice_amount_residual"/>
                             <field name="payment_method"/>
                             <field name="payment_status"/>
                             <field name="voucher_id"/>
@@ -85,6 +135,12 @@
                             <field name="gift_recipient_email"/>
                             <field name="gift_recipient_address"/>
                             <field name="gift_message"/>
+                        </group>
+                        <group string="Order Sync">
+                            <field name="sale_order_state"/>
+                            <field name="related_order_booking_count"/>
+                            <field name="related_order_cancelled_booking_count"/>
+                            <field name="order_has_non_booking_lines"/>
                         </group>
                     </group>
 

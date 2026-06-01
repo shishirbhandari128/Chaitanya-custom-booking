@@ -13,6 +13,7 @@
         "sale_management",
         "website",
         "website_sale",
+        "account",
     ],
     
     "data": [
