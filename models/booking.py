@@ -220,7 +220,7 @@ class ChaitanyaAppointmentBooking(models.Model):
             })
 
             if order.state != "cancel":
-                order.sudo().action_cancel()
+                order.sudo()._action_cancel()
 
         return True
 
@@ -329,30 +329,94 @@ class ChaitanyaAppointmentBooking(models.Model):
         )
 
 
+  
     def _can_auto_cancel_sale_order(self):
         self.ensure_one()
+        import logging
+        _logger = logging.getLogger(__name__)
 
         order = self.sale_order_id
 
-        if not order or order.state == "cancel":
+        if not order:
+            _logger.warning("AUTO-CANCEL: No order linked to booking %s", self.name)
             return False
 
-        if self._get_order_non_booking_lines():
+        if order.state == "cancel":
+            _logger.warning("AUTO-CANCEL: Order %s already cancelled", order.name)
             return False
 
-        return self._all_order_bookings_cancelled()
+        blocking_lines = order.order_line.filtered(
+            lambda line: not line.display_type
+            and not line.booking_id
+            and line.price_subtotal > 0
+            and not getattr(line, "is_delivery", False)
+        )
+
+        if blocking_lines:
+            _logger.warning(
+                "AUTO-CANCEL BLOCKED by lines: %s | price_subtotals: %s",
+                blocking_lines.mapped("name"),
+                blocking_lines.mapped("price_subtotal"),
+            )
+            return False
+
+        all_cancelled = self._all_order_bookings_cancelled()
+        _logger.warning(
+            "AUTO-CANCEL: all_bookings_cancelled=%s for order %s | bookings: %s | states: %s",
+            all_cancelled,
+            order.name,
+            self._get_order_bookings().mapped("name"),
+            self._get_order_bookings().mapped("state"),
+        )
+        return all_cancelled
 
 
     def _auto_cancel_sale_order_if_ready(self):
+        import logging
+        _logger = logging.getLogger(__name__)
+
         for booking in self:
             order = booking.sale_order_id
 
             if not order:
                 continue
 
-            if booking._can_auto_cancel_sale_order():
-                order.sudo().action_cancel()
+            _logger.warning(
+                "AUTO-CANCEL CHECK: booking=%s order=%s order_state=%s",
+                booking.name, order.name, order.state,
+            )
 
+            if booking._can_auto_cancel_sale_order():
+                all_lines = order.order_line.filtered(lambda l: not l.display_type)
+                _logger.warning(
+                    "AUTO-CANCEL PRE-CLEANUP lines: %s | booking_ids: %s | price_subtotals: %s",
+                    all_lines.mapped("name"),
+                    all_lines.mapped("booking_id.name"),
+                    all_lines.mapped("price_subtotal"),
+                )
+
+                leftover_lines = order.order_line.filtered(
+                    lambda line: not line.display_type
+                    and not line.booking_id
+                    and not getattr(line, "is_delivery", False)
+                )
+
+                if leftover_lines:
+                    _logger.warning(
+                        "AUTO-CANCEL CLEANUP removing lines: %s | prices: %s",
+                        leftover_lines.mapped("name"),
+                        leftover_lines.mapped("price_subtotal"),
+                    )
+                    leftover_lines.sudo().unlink()
+                else:
+                    _logger.warning("AUTO-CANCEL CLEANUP: no leftover lines to remove")
+
+                _logger.warning("AUTO-CANCEL EXECUTING for order %s", order.name)
+                order.sudo()._action_cancel()  # <-- bypasses wizard, cancels directly
+                _logger.warning(
+                    "AUTO-CANCEL DONE for order %s | new_state=%s",
+                    order.name, order.state,
+                )
 
     def _compute_order_booking_counts(self):
         for booking in self:
@@ -498,6 +562,8 @@ class ChaitanyaAppointmentBooking(models.Model):
         return True
 
     def unlink(self):
+        orders = self.mapped("sale_order_id")
+
         for booking in self:
             if booking.state != "cancelled":
                 raise UserError(_("You must cancel this booking before deleting it."))
@@ -509,5 +575,23 @@ class ChaitanyaAppointmentBooking(models.Model):
                     "You can delete this booking only after the related sale order is cancelled."
                 ))
 
-        return super().unlink()
+        result = super().unlink()
+
+        Booking = self.env["chaitanya.appointment.booking"].sudo()
+
+        for order in orders.sudo():
+            if not order.exists():
+                continue
+
+            remaining_bookings = Booking.search_count([
+                ("sale_order_id", "=", order.id),
+            ])
+
+            if remaining_bookings:
+                continue
+
+            if order.state in ("draft", "sent", "cancel"):
+                order.unlink()
+
+        return result
 

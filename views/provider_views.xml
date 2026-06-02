@@ -14,6 +14,9 @@
                 <field name="employee_id" optional="hide"/>
                 <field name="specialization"/>
                 <field name="specialty_ids" widget="many2many_tags"/>
+                <field name="total_booking_count" string="Total Bookings"/>
+                <field name="future_booking_count" string="Future Bookings"/>
+                <field name="today_booking_count" string="Today's Bookings"/>
                 <field name="is_active_for_booking"/>
                 <field name="active"/>
             </list>
@@ -29,6 +32,25 @@
         <field name="model">chaitanya.appointment.provider</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button type="object"
+                            name="action_view_bookings"
+                            class="btn btn-primary">
+                        Total Bookings (<field name="total_booking_count"/>)
+                    </button>
+
+                    <button type="object"
+                            name="action_view_today_bookings"
+                            class="btn btn-info">
+                        Today (<field name="today_booking_count"/>)
+                    </button>
+
+                    <button type="object"
+                            name="action_view_future_bookings"
+                            class="btn btn-success">
+                        Future (<field name="future_booking_count"/>)
+                    </button>
+                </header>
                 <sheet>
                     <group>
                         <group>
@@ -39,6 +61,7 @@
                             <field name="specialty_ids" widget="many2many_tags"/>
                             <field name="is_active_for_booking"/>
                             <field name="active"/>
+                            
                         </group>
                         <group>
                             <field name="image" widget="image"/>
@@ -191,6 +214,7 @@
         <field name="name">Therapists</field>
         <field name="res_model">chaitanya.appointment.provider</field>
         <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_chaitanya_provider_list"/>
     </record>
 
 </odoo>

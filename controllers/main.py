@@ -29,42 +29,6 @@ class ChaitanyaAppointmentController(http.Controller):
 
     
 
-
-    # @http.route(["/chaitanya/services"], type="http", auth="public", website=True, sitemap=True)
-    # def services_page(self, category=None, category_id=None, **kwargs):
-    #     selected_category_id = category or category_id
-    #     Category = request.env["chaitanya.appointment.service.category"].sudo()
-    #     Service = request.env["chaitanya.appointment.service"].sudo()
-    #     categories = Category.search([("active", "=", True), ("website_published", "=", True)])
-    #     domain = [("active", "=", True), ("website_published", "=", True)]
-    #     selected_category = False
-    #     if selected_category_id:
-    #         selected_category = Category.browse(int(selected_category_id))
-    #         if selected_category.exists():
-    #             domain.append(("category_id", "=", selected_category.id))
-    #     services = Service.search(domain, order="category_id, sequence, name")
-    #     return request.render(
-    #         "chaitanya_booking_flow.services_page",
-    #         {
-    #             "categories": categories,
-    #             "services": services,
-    #             "selected_category": selected_category,
-    #             "active_category_id": selected_category.id if selected_category else False,
-    #         },
-    #     )
-
-    # @http.route(
-    #     ["/chaitanya/service/<int:service_id>"],
-    #     type="http",
-    #     auth="public",
-    #     website=True,
-    # )
-    # def service_detail(self, service_id, **kwargs):
-    #     service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
-    #     if not service.exists() or not service.active or not service.website_published:
-    #         return request.not_found()
-    #     return request.render("chaitanya_booking_flow.service_detail_page", {"service": service})
-
     @http.route("/booking/start/<int:service_id>", type="http", auth="public", website=True, page=True)
     def booking_start(self, service_id, gift="0", product_id=False, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(service_id)
