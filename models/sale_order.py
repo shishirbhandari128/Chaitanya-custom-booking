@@ -8,6 +8,7 @@ class SaleOrderLine(models.Model):
     booking_id = fields.Many2one("chaitanya.appointment.booking", string="Booking", copy=False)
 
     chaitanya_service_id = fields.Many2one("chaitanya.appointment.service", copy=False)
+    chaitanya_duration = fields.Integer(string="Booking Duration (Minutes)", copy=False)
     chaitanya_provider_id = fields.Many2one("chaitanya.appointment.provider", copy=False)
     chaitanya_start_datetime = fields.Datetime(copy=False)
     chaitanya_end_datetime = fields.Datetime(copy=False)
@@ -147,6 +148,7 @@ class SaleOrder(models.Model):
                     "customer_phone": order.partner_id.phone or order.partner_id.mobile,
                     "start_datetime": start_dt,
                     "end_datetime": line.chaitanya_end_datetime,
+                    "duration": line.chaitanya_duration,    
                     "booking_method": line.chaitanya_booking_method or "availability",
                     "is_gift": line.chaitanya_is_gift,
                     "gift_delivery_type": line.chaitanya_gift_delivery_type,

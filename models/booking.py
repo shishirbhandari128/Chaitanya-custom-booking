@@ -162,6 +162,12 @@ class ChaitanyaAppointmentBooking(models.Model):
     )
 
     notes = fields.Text()
+    calendar_event_id = fields.Many2one(
+        "calendar.event",
+        string="Odoo Calendar Event",
+        readonly=True,
+        copy=False,
+    )   
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -178,10 +184,136 @@ class ChaitanyaAppointmentBooking(models.Model):
                     start_dt + timedelta(minutes=service.duration)
                 )
 
-        return super().create(vals_list)
+        bookings = super().create(vals_list)
+        bookings._sync_odoo_calendar_event()
+        return bookings
 
     def write(self, vals):
-        return super().write(vals)
+        result = super().write(vals)
+
+        if not self.env.context.get("skip_odoo_calendar_sync"):
+            sync_fields = {
+                "service_id",
+                "provider_id",
+                "partner_id",
+                "customer_name",
+                "start_datetime",
+                "end_datetime",
+                "notes",
+                "product_variant_description",
+                "state",
+            }
+
+            if sync_fields.intersection(vals):
+                self._sync_odoo_calendar_event()
+
+        return result
+        
+    def _get_odoo_event_user(self):
+        self.ensure_one()
+
+        if (
+            self.provider_id
+            and "user_id" in self.provider_id._fields
+            and self.provider_id.user_id
+        ):
+            return self.provider_id.user_id
+
+        return False
+
+
+    def _get_odoo_event_partner(self):
+        self.ensure_one()
+        return self.partner_id or self.sale_order_id.partner_id
+
+
+    def _odoo_calendar_event_values(self):
+        self.ensure_one()
+
+        CalendarEvent = self.env["calendar.event"]
+
+        partner = self._get_odoo_event_partner()
+        user = self._get_odoo_event_user()
+
+        if self.service_id:
+            self.service_id._ensure_odoo_appointment_type()
+            self.service_id._sync_odoo_appointment_type()
+
+        appointment_type = self.service_id.odoo_appointment_type_id
+
+        values = {
+            "name": "%s - %s" % (
+                self.product_variant_description or self.service_id.name or "Booking",
+                self.customer_name or partner.name or "",
+            ),
+            "start": self.start_datetime,
+            "stop": self.end_datetime,
+        }
+
+        if "description" in CalendarEvent._fields:
+            values["description"] = self.notes or ""
+
+        if user and "user_id" in CalendarEvent._fields:
+            values["user_id"] = user.id
+
+        if partner and "partner_ids" in CalendarEvent._fields:
+            values["partner_ids"] = [(6, 0, partner.ids)]
+
+        if appointment_type and "appointment_type_id" in CalendarEvent._fields:
+            values["appointment_type_id"] = appointment_type.id
+
+        return values
+
+
+    def _sync_odoo_calendar_event(self):
+        CalendarEvent = self.env["calendar.event"].sudo()
+
+        for booking in self:
+            if booking.state == "cancelled":
+                booking._cancel_odoo_calendar_event()
+                continue
+
+            if not booking.start_datetime or not booking.end_datetime:
+                continue
+
+            values = booking._odoo_calendar_event_values()
+
+            if booking.calendar_event_id:
+                booking.calendar_event_id.sudo().write(values)
+            else:
+                event = CalendarEvent.create(values)
+                booking.with_context(skip_odoo_calendar_sync=True).sudo().write({
+                    "calendar_event_id": event.id,
+                })
+
+
+    def _cancel_odoo_calendar_event(self):
+        for booking in self.filtered("calendar_event_id"):
+            event = booking.calendar_event_id.sudo()
+
+            if "active" in event._fields:
+                event.write({"active": False})
+            else:
+                event.unlink()
+                booking.with_context(skip_odoo_calendar_sync=True).sudo().write({
+                    "calendar_event_id": False,
+                })
+
+
+    def action_view_odoo_calendar_event(self):
+        self.ensure_one()
+
+        if not self.calendar_event_id:
+            raise UserError(_("No Odoo calendar event is linked to this booking."))
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Odoo Appointment",
+            "res_model": "calendar.event",
+            "res_id": self.calendar_event_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
     @api.constrains("start_datetime", "end_datetime")
     def _check_datetime_range(self):
@@ -203,6 +335,7 @@ class ChaitanyaAppointmentBooking(models.Model):
                 line.sudo().unlink()
 
             booking._auto_cancel_sale_order_if_ready()
+            booking._cancel_odoo_calendar_event()
 
         return True
 

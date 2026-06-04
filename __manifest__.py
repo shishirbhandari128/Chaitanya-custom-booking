@@ -14,6 +14,8 @@
         "website",
         "website_sale",
         "account",
+        "calendar",
+        "appointment",
     ],
     
     "data": [

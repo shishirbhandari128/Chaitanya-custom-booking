@@ -14,7 +14,7 @@ async function rpc(route, params) {
 
     if (payload.error) {
         throw new Error(payload.error.data?.message || payload.error.message || "RPC error");
-    }
+    }               
 
     return payload.result;
 }
@@ -290,6 +290,26 @@ function renderTherapistCards(form, therapists, options = {}) {
             }
 
             form.querySelector("#chProviderId").value = t.id;
+            const providerInput = form.querySelector("#chProviderId");
+
+            const isAlreadySelected = card.classList.contains("is-selected");
+                if (isAlreadySelected) {
+                    // ✅ only allow unselect in availability mode
+                    if (method === "availability") {
+                        card.classList.remove("is-selected");
+
+                        const btn = card.querySelector(".ch-choose-btn");
+                        if (btn) btn.textContent = "Choose";
+
+                        form.querySelector("#chProviderId").value = "";
+
+                        return;
+                    }
+
+                    // ❌ in therapist mode, ignore unselect OR just do nothing
+                    return;
+                }
+
 
             if (method === "availability") {
                 const result = await checkSlotInCart(form, startDatetime);
@@ -425,6 +445,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     form.querySelector("#chAvailableDateSelect")?.addEventListener("change", async () => {
         const providerId = form.querySelector("#chProviderId").value;
+
         const date = form.querySelector("#chAvailableDateSelect").value;
 
         await loadSlotsForProviderDate(form, providerId, date);
@@ -438,20 +459,59 @@ document.addEventListener("DOMContentLoaded", async () => {
         configureGiftFields(form);
     });
 
-    form.addEventListener("submit", event => {
-        const providerId = form.querySelector("#chProviderId").value;
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
         const startDatetime = form.querySelector("#chStartDatetime").value;
+        const serviceId = form.querySelector("[name='service_id']").value; 
+        const bookingMethod = form.querySelector("[name='booking_method']").value;
+        let providerId = form.querySelector("#chProviderId").value;
 
-        if (!providerId || !startDatetime) {
-            event.preventDefault();
+        console.log("=== SUBMIT DEBUG ===");
+        console.log("startDatetime:", startDatetime);
+        console.log("bookingMethod:", bookingMethod);
+        console.log("providerId at submit:", providerId);  // ← is this empty or has value?
 
-            if (!startDatetime) {
-                setMessage(form.querySelector("#chSlotCards"), "Please choose a time slot.");
-                scrollToSlotSection(form);
-            } else {
-                setMessage(form.querySelector("#chTherapistCards"), "Please choose a therapist.");
-                scrollToTherapistSection(form);
+        if (!providerId && bookingMethod === "availability") {
+            try {
+                providerId = "";
+
+                const resolved = await rpc("/booking/resolve_provider", {
+                    service_id: serviceId,
+                    start_datetime: startDatetime,
+                    booking_method: bookingMethod,
+                });
+
+                if (resolved.error) {
+                    alert(resolved.error);
+                    return;
+                }
+
+                providerId = resolved.provider_id;
+                form.querySelector("#chProviderId").value = providerId;
+                
+            } catch (e) {
+                console.log("resolve_provider exception:", e);
+                alert(e.message || "Something went wrong.");
+                return;
             }
         }
+
+        console.log("providerId before cart check:", providerId);  // ← is this correct provider?
+
+        if (providerId) {
+            try {
+                const result = await checkSlotInCart(form, startDatetime);
+                console.log("cart check result:", result);  // ← is in_cart true or false?
+                if (result.in_cart) {
+                    alert(result.message || "This time slot is already in your cart.");
+                    return;
+                }
+            } catch (e) {
+                console.log("cart check exception:", e);
+            }
+        }
+
+        form.submit();
     });
 });

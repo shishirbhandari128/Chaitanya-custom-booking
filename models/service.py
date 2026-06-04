@@ -64,11 +64,6 @@ class ChaitanyaAppointmentService(models.Model):
         readonly=True,
     )
 
-    attribute_line_ids = fields.One2many(
-        "chaitanya.service.attribute.line",
-        "service_id",
-        string="Service Options",
-    )
 
     image = fields.Binary(attachment=True)
 
@@ -83,12 +78,24 @@ class ChaitanyaAppointmentService(models.Model):
     allow_gift = fields.Boolean(default=True)
     active = fields.Boolean(default=True)
     website_published = fields.Boolean(default=True)
+    odoo_appointment_type_id = fields.Many2one(
+        "appointment.type",
+        string="Odoo Appointment Type",
+        copy=False,
+        readonly=True,
+    )
 
+    @api.model_create_multi
     @api.model_create_multi
     def create(self, vals_list):
         services = super().create(vals_list)
+
         services._ensure_checkout_product()
         services.attribute_line_ids.sync_to_product_template()
+
+        services._ensure_odoo_appointment_type()
+        services._sync_odoo_appointment_type()
+
         return services
 
     def write(self, vals):
@@ -110,6 +117,19 @@ class ChaitanyaAppointmentService(models.Model):
         if sync_fields.intersection(vals):
             self._ensure_checkout_product()
             self._sync_checkout_product()
+        
+        if not self.env.context.get("skip_odoo_appointment_sync"):
+            appointment_sync_fields = {
+                "name",
+                "duration",
+                "image",
+                "provider_ids",
+                "active",
+            }
+
+            if appointment_sync_fields.intersection(vals):
+                self._ensure_odoo_appointment_type()
+                self._sync_odoo_appointment_type()
 
         return result
 
@@ -117,6 +137,10 @@ class ChaitanyaAppointmentService(models.Model):
         self._ensure_checkout_product()
         self._sync_checkout_product()
         self.attribute_line_ids.sync_to_product_template()
+
+        self._ensure_odoo_appointment_type()
+        self._sync_odoo_appointment_type()
+
         return True
 
     def action_open_checkout_product(self):
@@ -192,15 +216,98 @@ class ChaitanyaAppointmentService(models.Model):
 
     def unlink(self):
         templates = self.mapped("product_tmpl_id").sudo()
+        appointment_types = self.mapped("odoo_appointment_type_id").sudo()
+
         result = super().unlink()
 
         if templates:
             templates.unlink()
 
+        for appointment_type in appointment_types:
+            try:
+                appointment_type.unlink()
+            except Exception:
+                if "active" in appointment_type._fields:
+                    appointment_type.write({"active": False})
+
         return result
 
 
-from odoo import api, fields, models
+    def _get_odoo_appointment_users(self):
+        self.ensure_one()
+        if "user_id" not in self.env["chaitanya.appointment.provider"]._fields:
+            return self.env["res.users"]
+        return self.provider_ids.mapped("user_id").filtered(lambda user: user.active)
+
+
+    def _odoo_appointment_type_values(self):
+        self.ensure_one()
+        AppointmentType = self.env["appointment.type"]
+
+        values = {
+            "name": self.name,
+        }
+
+        duration_hours = self.duration / 60.0
+
+        if "appointment_duration" in AppointmentType._fields:
+            values["appointment_duration"] = duration_hours
+        elif "duration" in AppointmentType._fields:
+            values["duration"] = duration_hours
+
+        if "image_1920" in AppointmentType._fields and self.image:
+            values["image_1920"] = self.image
+
+        if "active" in AppointmentType._fields:
+            values["active"] = self.active
+
+        if "schedule_based_on" in AppointmentType._fields:
+            values["schedule_based_on"] = "users"
+
+        users = self._get_odoo_appointment_users()
+
+        if users:
+            if "staff_user_ids" in AppointmentType._fields:
+                values["staff_user_ids"] = [(6, 0, users.ids)]
+            elif "user_ids" in AppointmentType._fields:
+                values["user_ids"] = [(6, 0, users.ids)]
+
+        return values
+
+
+    def _ensure_odoo_appointment_type(self):
+        AppointmentType = self.env["appointment.type"].sudo()
+
+        for service in self:
+            if service.odoo_appointment_type_id:
+                continue
+
+            appointment_type = AppointmentType.create(service._odoo_appointment_type_values())
+
+            service.with_context(skip_odoo_appointment_sync=True).sudo().write({
+                "odoo_appointment_type_id": appointment_type.id,
+            })
+
+
+    def _sync_odoo_appointment_type(self):
+        for service in self.filtered("odoo_appointment_type_id"):
+            service.odoo_appointment_type_id.sudo().write(
+                service._odoo_appointment_type_values()
+            )
+
+
+    def action_open_odoo_appointment_type(self):
+        self.ensure_one()
+        self._ensure_odoo_appointment_type()
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Odoo Appointment Type",
+            "res_model": "appointment.type",
+            "res_id": self.odoo_appointment_type_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
 
 class ChaitanyaServiceAttribute(models.Model):
@@ -298,6 +405,19 @@ class ChaitanyaServiceAttribute(models.Model):
                 ("attribute_id", "in", self.ids),
             ]).sync_to_product_template()
 
+        if not self.env.context.get("skip_odoo_appointment_sync"):
+            appointment_sync_fields = {
+                "name",
+                "duration",
+                "image",
+                "provider_ids",
+                "active",
+            }
+
+            if appointment_sync_fields.intersection(vals):
+                self._ensure_odoo_appointment_type()
+                self._sync_odoo_appointment_type()
+
         return result
 
 
@@ -316,6 +436,11 @@ class ChaitanyaServiceAttributeValue(models.Model):
 
     name = fields.Char(required=True)
     default_extra_price = fields.Float(string="Default Extra Price", default=0.0)
+    override_duration = fields.Integer(
+        string="Override Duration (Min)",
+        default=0,
+        help="Replaces service base duration for this variant. Leave 0 to use service default."
+    )
 
     product_attribute_value_id = fields.Many2one(
         "product.attribute.value",
@@ -323,6 +448,25 @@ class ChaitanyaServiceAttributeValue(models.Model):
         readonly=True,
         copy=False,
     )
+
+
+
+
+    def _resolve_variant_duration(self, product_variant):
+        """
+        Returns override_duration from the selected product variant's
+        linked chaitanya attribute value, or falls back to self.duration.
+        """
+        self.ensure_one()
+        for ptav in product_variant.product_template_attribute_value_ids:
+            pav = ptav.product_attribute_value_id
+            attr_value = self.env["chaitanya.service.attribute.value"].search([
+                ("product_attribute_value_id", "=", pav.id),
+            ], limit=1)
+            if attr_value and attr_value.override_duration:
+                return attr_value.override_duration
+
+        return self.duration  # fallback
 
     def _product_attribute_value_vals(self):
         self.ensure_one()

@@ -137,7 +137,7 @@
 
                                     <div class="ch-panel-section" id="chTherapistSection">
                                         <div class="ch-section-header">
-                                            <h2 class="ch-section-title">Select a Therapist</h2>
+                                            <h2 class="ch-section-title">Select a Therapist (Optional)</h2>
                                         </div>
 
                                         <div id="chTherapistCards"

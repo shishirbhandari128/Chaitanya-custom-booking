@@ -9,6 +9,11 @@ class ChaitanyaAppointmentProvider(models.Model):
     _order = "name"
 
     name = fields.Char(required=True, tracking=True)
+    user_id = fields.Many2one(
+        "res.users",
+        string="Odoo User",
+        help="Used to show this therapist's bookings in Odoo Calendar/Appointments.",
+    )
     image = fields.Binary(attachment=True)
     employee_id = fields.Many2one("res.users", string="Employee/User")
     user_id = fields.Many2one("res.users", string="Related User")
@@ -43,6 +48,8 @@ class ChaitanyaAppointmentProvider(models.Model):
         "provider_id",
         string="Bookings"
     )
+    last_auto_assigned = fields.Datetime(string="Last Auto Assigned", readonly=True)
+    
     future_booking_count = fields.Integer(compute="_compute_booking_counts", store=True)
     today_booking_count = fields.Integer(compute="_compute_booking_counts", store=True)
     total_booking_count = fields.Integer(compute="_compute_booking_counts", store=True)

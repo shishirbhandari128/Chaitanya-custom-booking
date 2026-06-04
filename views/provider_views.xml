@@ -61,6 +61,7 @@
                             <field name="specialty_ids" widget="many2many_tags"/>
                             <field name="is_active_for_booking"/>
                             <field name="active"/>
+                            <field name="last_auto_assigned"/>
                             
                         </group>
                         <group>
