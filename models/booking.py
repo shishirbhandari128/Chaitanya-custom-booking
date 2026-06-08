@@ -262,6 +262,9 @@ class ChaitanyaAppointmentBooking(models.Model):
         if appointment_type and "appointment_type_id" in CalendarEvent._fields:
             values["appointment_type_id"] = appointment_type.id
 
+        if "appointment_booker_id" in CalendarEvent._fields and partner:
+            values["appointment_booker_id"] = partner.id
+
         return values
 
 
@@ -285,6 +288,21 @@ class ChaitanyaAppointmentBooking(models.Model):
                 booking.with_context(skip_odoo_calendar_sync=True).sudo().write({
                     "calendar_event_id": event.id,
                 })
+
+            # Link resource via booking line after event exists
+            if booking.provider_id and booking.provider_id.resource_id and booking.calendar_event_id:
+                event = booking.calendar_event_id.sudo()
+                BookingLine = self.env['appointment.booking.line'].sudo()
+                existing = BookingLine.search([
+                    ('calendar_event_id', '=', event.id),
+                    ('appointment_resource_id', '=', booking.provider_id.resource_id.id),
+                ], limit=1)
+                if not existing:
+                    BookingLine.create({
+                        'calendar_event_id': event.id,
+                        'appointment_resource_id': booking.provider_id.resource_id.id,
+                        'capacity_reserved': 1,
+                    })
 
 
     def _cancel_odoo_calendar_event(self):

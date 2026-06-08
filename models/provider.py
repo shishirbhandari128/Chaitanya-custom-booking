@@ -14,9 +14,14 @@ class ChaitanyaAppointmentProvider(models.Model):
         string="Odoo User",
         help="Used to show this therapist's bookings in Odoo Calendar/Appointments.",
     )
+    resource_id = fields.Many2one(
+        'appointment.resource',
+        string='Appointment Resource',
+        readonly=True,
+        copy=False,
+    )
+    
     image = fields.Binary(attachment=True)
-    employee_id = fields.Many2one("res.users", string="Employee/User")
-    user_id = fields.Many2one("res.users", string="Related User")
     specialization = fields.Char(translate=True)
     specialty_ids = fields.Many2many(
         "chaitanya.appointment.service.category",
@@ -54,13 +59,59 @@ class ChaitanyaAppointmentProvider(models.Model):
     today_booking_count = fields.Integer(compute="_compute_booking_counts", store=True)
     total_booking_count = fields.Integer(compute="_compute_booking_counts", store=True)
 
- # override_ids = fields.One2many(
-    #     "chaitanya.appointment.schedule.override",
-    #     "provider_id",
-    #     string="Schedule Overrides"
-    # )
 
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('user_id'):
+                user = self.env['res.users'].sudo().create({
+                    'name': vals['name'],
+                    'login': f"therapist.{vals['name'].lower().replace(' ', '.')}@chaitanya.com",
+                    'groups_id': [(4, self.env.ref('base.group_user').id)],
+                })
+                vals['user_id'] = user.id
+
+            resource = self.env['appointment.resource'].sudo().create({
+                'name': vals['name'],
+                'capacity': 1,
+            })
+            vals['resource_id'] = resource.id
+
+        return super().create(vals_list)
+
+    def write(self, vals):
+        old_services = self.service_ids if 'service_ids' in vals else self.env['chaitanya.appointment.service']
+        result = super().write(vals)
+
+        if 'service_ids' in vals:
+            affected_services = (old_services | self.service_ids).filtered('odoo_appointment_type_id')
+            affected_services._sync_odoo_appointment_type()
+
+        if 'active' in vals:
+            self.service_ids.filtered('odoo_appointment_type_id')._sync_odoo_appointment_type()
+            for provider in self:
+                if provider.user_id:
+                    provider.user_id.sudo().write({'active': vals['active']})
+                if provider.resource_id:
+                    provider.resource_id.sudo().write({'active': vals['active']})
+
+        if 'name' in vals:
+            for provider in self:
+                if provider.resource_id:
+                    provider.resource_id.sudo().write({'name': vals['name']})
+                if provider.user_id:
+                    provider.user_id.sudo().write({'name': vals['name']})
+
+        return result
+
+    def unlink(self):
+        users = self.mapped('user_id').filtered(lambda u: u.active)
+        resources = self.mapped('resource_id')
+        result = super().unlink()
+        resources.sudo().unlink()
+        users.sudo().unlink()
+        return result
 
 
     @api.depends('booking_ids.state', 'booking_ids.start_datetime')

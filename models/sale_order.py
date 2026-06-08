@@ -108,6 +108,7 @@ class SaleOrder(models.Model):
         Booking = self.env["chaitanya.appointment.booking"].sudo()
 
         for order in self:
+            order._chaitanya_validate_booking_lines()
             payment_method = order._get_chaitanya_payment_method_name()
             payment_status = order._get_chaitanya_payment_status()
 
@@ -168,10 +169,109 @@ class SaleOrder(models.Model):
                 line.booking_id = booking.id
 
         return True
+    
+    
+   
+
+    
+
+    def _chaitanya_get_invalid_booking_lines(self):
+        self.ensure_one()
+
+        Booking = self.env["chaitanya.appointment.booking"].sudo()
+        invalid_lines = []
+
+        booking_lines = self.order_line.sudo().filtered(
+            lambda line: line.chaitanya_service_id
+            or line.chaitanya_provider_id
+            or line.chaitanya_start_datetime
+        )
+
+        for line in booking_lines:
+            service = line.chaitanya_service_id.sudo()
+            provider = line.chaitanya_provider_id.sudo()
+            start_dt = line.chaitanya_start_datetime
+
+            reason = False
+
+            if not service or not service.exists():
+                reason = _("The selected service no longer exists.")
+
+            elif not service.active or not service.website_published:
+                reason = _("The selected service is no longer available.")
+
+            elif not provider or not provider.exists():
+                reason = _("The selected therapist no longer exists.")
+
+            elif not provider.active or not provider.is_active_for_booking:
+                reason = _("The selected therapist is no longer available for booking.")
+
+            elif provider not in service.provider_ids.sudo():
+                reason = _("The selected therapist is no longer assigned to this service.")
+
+            elif not start_dt:
+                reason = _("The booking time is missing.")
+
+            elif not Booking._is_slot_available(
+                service,
+                provider,
+                start_dt,
+                exclude_booking=line.booking_id.sudo() if line.booking_id else False,
+            ):
+                reason = _("The selected time slot is no longer available.")
+
+            if reason:
+                invalid_lines.append({
+                    "line": line,
+                    "reason": reason,
+                })
+
+        return invalid_lines
+
+
+    def _chaitanya_invalid_booking_message(self):
+        self.ensure_one()
+
+        invalid_lines = self._chaitanya_get_invalid_booking_lines()
+
+        if not invalid_lines:
+            return ""
+
+        message_lines = [_("Some booking items in your cart are no longer available:")]
+
+        for item in invalid_lines:
+            line = item["line"].sudo()
+            message_lines.append(
+                "- %s: %s" % (
+                    (line.name or "").split("\n")[0],
+                    item["reason"],
+                )
+            )
+
+        message_lines.append("")
+        message_lines.append(_("Please remove these items from your cart and choose another time."))
+
+        return "\n".join(message_lines)
+
+
+    def _chaitanya_validate_booking_lines(self):
+        self.ensure_one()
+
+        message = self._chaitanya_invalid_booking_message()
+
+        if message:
+            raise UserError(message)
+
+        return True
 
     def action_confirm(self):
+        for order in self:
+            order._chaitanya_validate_booking_lines()
+
         res = super().action_confirm()
+
         self._create_chaitanya_bookings_from_order()
+
         return res
 
     def _cart_find_product_line(self, product_id=None, line_id=None, **kwargs):
@@ -185,72 +285,3 @@ class SaleOrder(models.Model):
         )
 
 
-# from odoo import fields, models
-
-
-# class ChaitanyaAppointmentBooking(models.Model):
-#     _inherit = "chaitanya.appointment.booking"
-
-#     sale_order_id = fields.Many2one("sale.order", readonly=True, copy=False)
-#     sale_order_line_id = fields.Many2one("sale.order.line", readonly=True, copy=False)
-
-
-# class SaleOrder(models.Model):
-#     _inherit = "sale.order"
-
-#     def action_confirm(self):
-#         result = super().action_confirm()
-#         for order in self:
-#             linked_bookings = order.order_line.mapped("booking_id").filtered(
-#                 lambda booking: booking.state in ("reserved", "pending_payment")
-#             )
-#             for booking in linked_bookings:
-#                 partner = order.partner_id
-#                 booking.write({
-#                     "partner_id": partner.id,
-#                     "customer_name": partner.name,
-#                     "customer_email": partner.email,
-#                     "customer_phone": partner.phone or partner.mobile,
-#                 })
-#                 booking.action_confirm()
-#                 booking.payment_status = "paid"
-#         return result
-
-#     def _cart_find_product_line(self, product_id=None, line_id=None, **kwargs):
-#         if kwargs.get("chaitanya_booking_id"):
-#             return self.env["sale.order.line"]
-#         return super()._cart_find_product_line(product_id=product_id, line_id=line_id, **kwargs)
-
-#     def _cart_update(self, product_id=None, line_id=None, add_qty=0, set_qty=0, **kwargs):
-#         booking = self.env["chaitanya.appointment.booking"]
-#         if line_id:
-#             line = self.env["sale.order.line"].sudo().browse(line_id)
-#             booking = line.booking_id
-#         result = super()._cart_update(
-#             product_id=product_id,
-#             line_id=line_id,
-#             add_qty=add_qty,
-#             set_qty=set_qty,
-#             **kwargs,
-#         )
-#         if booking:
-#             line = booking.sale_order_line_id
-#             if set_qty == 0 or not line.exists():
-#                 booking.action_cancel()
-#             elif line.product_uom_qty != 1:
-#                 line.product_uom_qty = 1
-#                 result["quantity"] = 1
-#         return result
-
-#     def _prepare_order_line_values(self, product_id, quantity, **kwargs):
-#         values = super()._prepare_order_line_values(product_id, quantity, **kwargs)
-#         booking_id = kwargs.get("chaitanya_booking_id")
-#         if booking_id:
-#             values["booking_id"] = booking_id
-#         return values
-
-
-# class SaleOrderLine(models.Model):
-#     _inherit = "sale.order.line"
-
-#     booking_id = fields.Many2one("chaitanya.appointment.booking", string="Booking", copy=False)

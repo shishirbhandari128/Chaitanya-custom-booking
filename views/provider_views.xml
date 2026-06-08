@@ -11,7 +11,7 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
-                <field name="employee_id" optional="hide"/>
+                <!-- <field name="employee_id" optional="hide"/> -->
                 <field name="specialization"/>
                 <field name="specialty_ids" widget="many2many_tags"/>
                 <field name="total_booking_count" string="Total Bookings"/>
@@ -55,8 +55,8 @@
                     <group>
                         <group>
                             <field name="name"/>
-                            <field name="employee_id"/>
-                            <field name="user_id"/>
+                            <!-- <field name="employee_id"/> -->
+                            <!-- <field name="user_id"/> -->
                             <field name="specialization"/>
                             <field name="specialty_ids" widget="many2many_tags"/>
                             <field name="is_active_for_booking"/>

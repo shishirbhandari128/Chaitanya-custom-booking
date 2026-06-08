@@ -2,6 +2,7 @@
 <odoo>
 
     <!-- Booking buttons: only for booking service products -->
+    <!-- Booking buttons: only for booking service products -->
     <record id="product_booking_buttons" model="ir.ui.view">
         <field name="name">product.booking.buttons</field>
         <field name="inherit_id" ref="website_sale.product"/>
@@ -10,7 +11,8 @@
 
             <!-- Insert booking buttons before default add-to-cart block -->
             <xpath expr="//div[@id='add_to_cart_wrap']" position="before">
-                <t t-if="product.is_booking_service and product.appointment_service_id">
+                <t t-if="product.is_booking_service and product.sudo().appointment_service_id">
+                    <t t-set="booking_service" t-value="product.sudo().appointment_service_id"/>
 
                     <div id="booking_service_actions_block"
                         class="d-flex flex-column align-items-start w-100 mb-3">
@@ -21,7 +23,7 @@
                             <a role="button"
                             id="custom_book_now_button"
                             class="btn btn-primary"
-                            t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=0&amp;product_id=#{product.id}">
+                            t-attf-href="/booking/start/#{booking_service.id}?gift=0&amp;product_id=#{product.id}">
                                 Book Now
                             </a>
 
@@ -29,26 +31,26 @@
                                 <a role="button"
                                 id="gift_now_button"
                                 class="btn btn-outline-primary"
-                                t-attf-href="/booking/start/#{product.appointment_service_id.id}?gift=1">
+                                t-attf-href="/booking/start/#{booking_service.id}?gift=1&amp;product_id=#{product.id}">
                                     <i class="fa fa-gift me-1"/>
                                     Gift Now
                                 </a>
                             </t>
 
                         </div>
+
                         <p id="debug_product_id"></p>
 
                         <t t-if="not product.attribute_line_ids.filtered(lambda l: l.attribute_id.name.lower() == 'duration')">
                             <div class="ch-product-duration-info">
                                 <strong>Duration</strong>
                                 <span>
-                                    <t t-out="product.appointment_service_id.duration"/> min
+                                    <t t-out="booking_service.duration"/> min
                                 </span>
                             </div>
                         </t>
 
                     </div>
-
                 </t>
             </xpath>
 
@@ -56,11 +58,9 @@
             <xpath expr="//div[@id='add_to_cart_wrap']" position="attributes">
                 <attribute name="t-if">not product.is_booking_service</attribute>
             </xpath>
-            
 
         </field>
     </record>
-    
 
 
     <!-- Hide quantity counter for booking service products -->

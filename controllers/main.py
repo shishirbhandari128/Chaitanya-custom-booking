@@ -18,6 +18,8 @@ class ChaitanyaWebsiteSale(WebsiteSale):
     def service_shop(self, page=0, category=None, search='', **kwargs):
         return super().shop(page=page, category=category, search=search, **kwargs)
 
+    
+
 
 class ChaitanyaAppointmentController(http.Controller):
 
@@ -150,6 +152,22 @@ class ChaitanyaAppointmentController(http.Controller):
         selected_value = fields.Datetime.to_string(start_dt)
         available_slots = self._get_provider_slots(service, provider, selected_date)
         return any(slot["value"] == selected_value for slot in available_slots)
+    
+    def _chaitanya_check_cart_booking_lines(self):
+        order = request.website.sale_get_order()
+
+        if not order:
+            return False
+
+        message = order.sudo()._chaitanya_invalid_booking_message()
+
+        if message:
+            return request.render(
+                "chaitanya_booking_flow.booking_error_page",
+                {"message": message},
+            )
+
+        return False
 
     def _is_slot_already_in_cart(self, order, provider, start_dt, end_dt):
         if not order:
@@ -369,43 +387,30 @@ class ChaitanyaAppointmentController(http.Controller):
     @http.route("/booking/check_cart_slots", type="json", auth="public", website=True)
     def check_cart_slots(self, **kwargs):
         order = request.website.sale_get_order()
+
         if not order:
-            return {"valid": True, "message": "", "unavailable_lines": []}
+            return {
+                "valid": True,
+                "message": "",
+                "unavailable_lines": [],
+            }
 
-        tz = self._booking_timezone()
-        unavailable_lines = []
+        message = order.sudo()._chaitanya_invalid_booking_message()
 
-        for line in order.order_line:
-            service = line.chaitanya_service_id
-            provider = line.chaitanya_provider_id
-            start_dt = line.chaitanya_start_datetime
-            end_dt = line.chaitanya_end_datetime
-
-            if not service or not provider or not start_dt:
-                continue
-
-            if not self._is_selected_slot_still_valid(service, provider, start_dt):
-                start_local = pytz.utc.localize(start_dt).astimezone(tz)
-                end_local = pytz.utc.localize(end_dt).astimezone(tz) if end_dt else False
-                unavailable_lines.append({
-                    "line_id": line.id,
-                    "service": service.name,
-                    "therapist": provider.name,
-                    "date": start_local.strftime("%d %b %Y"),
-                    "time": "%s - %s" % (
-                        start_local.strftime("%I:%M %p"),
-                        end_local.strftime("%I:%M %p") if end_local else "",
-                    ),
-                })
-
-        if unavailable_lines:
+        if message:
             return {
                 "valid": False,
-                "message": self._format_cart_slot_unavailable_message(unavailable_lines),
-                "unavailable_lines": unavailable_lines,
+                "message": message,
+                "unavailable_lines": [],
             }
-        return {"valid": True, "message": "", "unavailable_lines": []}
 
+        return {
+            "valid": True,
+            "message": "",
+            "unavailable_lines": [],
+        }
+
+        
     @http.route("/booking/check_slot_in_cart", type="json", auth="public", website=True)
     def check_slot_in_cart(self, service_id, provider_id, start_datetime, **kwargs):
         service = request.env["chaitanya.appointment.service"].sudo().browse(int(service_id))
