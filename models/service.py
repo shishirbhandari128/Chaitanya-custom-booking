@@ -86,7 +86,6 @@ class ChaitanyaAppointmentService(models.Model):
     )
 
     @api.model_create_multi
-    @api.model_create_multi
     def create(self, vals_list):
         services = super().create(vals_list)
 
@@ -312,6 +311,34 @@ class ChaitanyaAppointmentService(models.Model):
             "target": "current",
         }
 
+class AppointmentType(models.Model):
+    _inherit = "appointment.type"
+
+    @api.model
+    def action_calendar_meetings_users_all(self):
+        action = super().action_calendar_meetings_users_all()
+
+        resource_gantt_view = self.env.ref(
+            "appointment.calendar_event_view_gantt_booking_resource",
+            raise_if_not_found=False,
+        )
+
+        if resource_gantt_view:
+            current_views = action.get("views") or []
+            action["views"] = [
+                (resource_gantt_view.id, "gantt"),
+                *[(view_id, view_type) for view_id, view_type in current_views if view_type != "gantt"],
+            ]
+
+        context = dict(action.get("context") or {})
+        context.update({
+            "appointment_booking_gantt_domain": [("appointment_resource_ids", "!=", False)],
+            "appointment_default_assign_user_attendees": False,
+        })
+        action["context"] = context
+
+        return action
+        
 
 class ChaitanyaServiceAttribute(models.Model):
     _name = "chaitanya.service.attribute"
