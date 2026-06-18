@@ -2,6 +2,110 @@
 <odoo>
     <record id="view_chaitanya_service_list" model="ir.ui.view">
         <field name="name">chaitanya.appointment.service.list</field>
+        <field name="model">appointment.type</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="category_id" widget="many2many_tags"/>
+                <field name="appointment_duration"/>
+                <field name="price"/>
+                <field name="is_published"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_chaitanya_service_form" model="ir.ui.view">
+        <field name="name">chaitanya.appointment.service.form</field>
+        <field name="model">appointment.type</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <!-- <button name="action_ensure_checkout_product"
+                            type="object"
+                            string="Sync Product"
+                            class="btn-secondary"/>
+
+                    <button name="action_open_checkout_product"
+                            type="object"
+                            string="Open Product"
+                            class="btn-primary"
+                            invisible="not product_tmpl_id"/> -->
+                </header>
+
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="category_id" widget="many2many_tags"/>
+                            <field name="short_description"/>
+                            <field name="appointment_duration"/>
+                            <field name="price"/>
+                            <field name="currency_id"/>
+                            <field name="allow_gift"/>
+                            <field name="is_published"/>
+                            <field name="active"/>
+                        </group>
+
+                        <group>
+                            <field name="image_1920" widget="image"/>
+                            <field name="product_tmpl_id" readonly="1"/>
+                            <field name="product_id" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Therapists">
+                            <field name="provider_ids" widget="many2many_tags"/>
+                        </page>
+
+                        <page string="Service Options">
+                            <field name="service_attribute_line_ids"
+                                   context="{'default_product_tmpl_id': product_tmpl_id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="attribute_id"
+                                           domain="[('is_service_attribute', '=', True)]"/>
+                                    <field name="value_ids"
+                                           widget="many2many_tags"
+                                           domain="[('attribute_id', '=', attribute_id)]"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Description">
+                            <field name="short_description"/>
+                        </page>
+
+                        <page string="Benefits">
+                            <field name="benefits"/>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_chaitanya_service" model="ir.actions.act_window">
+        <field name="name">Services</field>
+        <field name="res_model">appointment.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_chaitanya_service_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_chaitanya_service_form')}),
+        ]"/>
+    </record>
+</odoo>
+
+
+<!-- <?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_chaitanya_service_list" model="ir.ui.view">
+        <field name="name">chaitanya.appointment.service.list</field>
         <field name="model">chaitanya.appointment.service</field>
         <field name="arch" type="xml">
             <list>
@@ -98,4 +202,4 @@
 </odoo>
 
 
-
+ -->

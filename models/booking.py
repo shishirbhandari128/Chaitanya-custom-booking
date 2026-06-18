@@ -4,16 +4,16 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError, UserError
 
 
-class ChaitanyaAppointmentBooking(models.Model):
-    _name = "chaitanya.appointment.booking"
-    _description = "Chaitanya Booking"
-    _inherit = ["mail.thread", "mail.activity.mixin"]
-    _order = "start_datetime desc"
+class CalendarEvent(models.Model):
+    _inherit = "calendar.event"
 
-    name = fields.Char(string="Booking Reference", default="/", readonly=True, copy=False)
+    provider_id = fields.Many2one(
+        "chaitanya.appointment.provider",
+        string="Therapist",
+        ondelete="set null",
+        tracking=True,
+    )
 
-    service_id = fields.Many2one("chaitanya.appointment.service", ondelete="set null", tracking=True)
-    provider_id = fields.Many2one("chaitanya.appointment.provider", string="Therapist", ondelete="set null", tracking=True)
     therapist_id = fields.Many2one(
         "chaitanya.appointment.provider",
         string="Therapist",
@@ -23,6 +23,7 @@ class ChaitanyaAppointmentBooking(models.Model):
     )
 
     product_id = fields.Many2one("product.product", string="Product Variant", readonly=True, copy=False)
+
     product_template_id = fields.Many2one(
         "product.template",
         string="Product",
@@ -30,37 +31,21 @@ class ChaitanyaAppointmentBooking(models.Model):
         store=True,
         readonly=True,
     )
+
     product_variant_description = fields.Char(string="Selected Variant", readonly=True, copy=False)
 
-    partner_id = fields.Many2one("res.partner", string="Customer")
     customer_name = fields.Char()
     customer_email = fields.Char()
     customer_phone = fields.Char()
 
-    start_datetime = fields.Datetime(required=True, tracking=True)
-    end_datetime = fields.Datetime(required=True, tracking=True)
-    duration = fields.Integer(related="service_id.duration", store=True)
-
-    active_amount = fields.Monetary(
-        string="Active Amount",
-        compute="_compute_lifecycle_amounts",
-        store=True,
-    )
-
-    refunded_amount = fields.Monetary(
-        string="Refunded/Cancelled Amount",
-        compute="_compute_lifecycle_amounts",
-        store=True,
-    )
-
-    net_amount = fields.Monetary(
-        string="Net Amount",
-        compute="_compute_lifecycle_amounts",
-        store=True,
+    duration = fields.Integer(
+        string="Booking Duration (Minutes)",
+        copy=False,
     )
 
     sale_order_id = fields.Many2one("sale.order", string="Sale Order", readonly=True, copy=False)
     sale_order_line_id = fields.Many2one("sale.order.line", string="Sale Order Line", readonly=True, copy=False)
+
     sale_order_state = fields.Selection(
         related="sale_order_id.state",
         string="Sale Order Status",
@@ -82,10 +67,20 @@ class ChaitanyaAppointmentBooking(models.Model):
         compute="_compute_order_booking_counts",
     )
 
+    sale_order_currency_id = fields.Many2one(
+        "res.currency",
+        related="sale_order_id.currency_id",
+        string="Sale Order Currency",
+        readonly=True,
+        store=True,
+    )
+
     sale_order_amount_total = fields.Monetary(
         related="sale_order_id.amount_total",
         string="Order Total",
         readonly=True,
+        currency_field="sale_order_currency_id",
+        store=True,
     )
 
     invoice_ids = fields.Many2many(
@@ -136,18 +131,42 @@ class ChaitanyaAppointmentBooking(models.Model):
     gift_recipient_address = fields.Text()
     gift_message = fields.Text()
 
-    voucher_id = fields.Many2one("chaitanya.appointment.voucher")
-
+    voucher_id = fields.Many2one("loyalty.card")
     currency_id = fields.Many2one(
         "res.currency",
+        string="Currency",
         default=lambda self: self.env.company.currency_id,
         required=True,
     )
-    base_amount = fields.Monetary(default=0.0)
-    discount_amount = fields.Monetary(default=0.0)
-    final_amount = fields.Monetary(default=0.0)
+    base_amount = fields.Monetary(default=0.0, currency_field="currency_id")
+    discount_amount = fields.Monetary(default=0.0, currency_field="currency_id")
+    final_amount = fields.Monetary(default=0.0, currency_field="currency_id")
+
+    active_amount = fields.Monetary(
+        string="Active Amount",
+        compute="_compute_lifecycle_amounts",
+        store=True,
+        currency_field="currency_id",
+    )
+
+    refunded_amount = fields.Monetary(
+        string="Refunded/Cancelled Amount",
+        compute="_compute_lifecycle_amounts",
+        store=True,
+        currency_field="currency_id",
+    )
+
+    net_amount = fields.Monetary(
+        string="Net Amount",
+        compute="_compute_lifecycle_amounts",
+        store=True,
+        currency_field="currency_id",
+    )
+
+    
 
     payment_method = fields.Char(string="Payment Method")
+
     payment_status = fields.Selection(
         [("unpaid", "Unpaid"), ("pending", "Pending"), ("paid", "Paid")],
         default="unpaid",
@@ -161,177 +180,61 @@ class ChaitanyaAppointmentBooking(models.Model):
         tracking=True,
     )
 
-    notes = fields.Text()
-    calendar_event_id = fields.Many2one(
-        "calendar.event",
-        string="Odoo Calendar Event",
-        readonly=True,
-        copy=False,
-    )   
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        sequence = self.env["ir.sequence"]
-
-        for vals in vals_list:
-            if vals.get("name", "/") == "/":
-                vals["name"] = sequence.next_by_code("chaitanya.appointment.booking") or "/"
-
-            if vals.get("service_id") and vals.get("start_datetime") and not vals.get("end_datetime"):
-                service = self.env["chaitanya.appointment.service"].browse(vals["service_id"])
-                start_dt = fields.Datetime.from_string(vals["start_datetime"])
-                vals["end_datetime"] = fields.Datetime.to_string(
-                    start_dt + timedelta(minutes=service.duration)
-                )
-
-        bookings = super().create(vals_list)
-        bookings._sync_odoo_calendar_event()
-        return bookings
-
-    def write(self, vals):
-        result = super().write(vals)
-
-        if not self.env.context.get("skip_odoo_calendar_sync"):
-            sync_fields = {
-                "service_id",
-                "provider_id",
-                "partner_id",
-                "customer_name",
-                "start_datetime",
-                "end_datetime",
-                "notes",
-                "product_variant_description",
-                "state",
-            }
-
-            if sync_fields.intersection(vals):
-                self._sync_odoo_calendar_event()
-
-        return result
-        
-    def _get_odoo_event_user(self):
+    def _get_order_bookings(self):
         self.ensure_one()
 
-        if (
-            self.provider_id
-            and "user_id" in self.provider_id._fields
-            and self.provider_id.user_id
-        ):
-            return self.provider_id.user_id
+        if not self.sale_order_id:
+            return self.env["calendar.event"]
 
-        return False
+        return self.env["calendar.event"].search([
+            ("sale_order_id", "=", self.sale_order_id.id),
+        ])
 
+    def _get_booking_duration_minutes(self, appointment_type, line=False):
+        if line and line.chaitanya_duration:
+            return line.chaitanya_duration
 
-    def _get_odoo_event_partner(self):
-        self.ensure_one()
-        return self.partner_id or self.sale_order_id.partner_id
-
-
-    def _odoo_calendar_event_values(self):
-        self.ensure_one()
-
-        CalendarEvent = self.env["calendar.event"]
-
-        partner = self._get_odoo_event_partner()
-        user = self._get_odoo_event_user()
-
-        if self.service_id:
-            self.service_id._ensure_odoo_appointment_type()
-            self.service_id._sync_odoo_appointment_type()
-
-        appointment_type = self.service_id.odoo_appointment_type_id
-
-        values = {
-            "name": "%s - %s" % (
-                self.product_variant_description or self.service_id.name or "Booking",
-                self.customer_name or partner.name or "",
-            ),
-            "start": self.start_datetime,
-            "stop": self.end_datetime,
-        }
-
-        if "description" in CalendarEvent._fields:
-            values["description"] = self.notes or ""
-
-        if user and "user_id" in CalendarEvent._fields:
-            values["user_id"] = user.id
-
-        if partner and "partner_ids" in CalendarEvent._fields:
-            values["partner_ids"] = [(6, 0, partner.ids)]
-
-        if appointment_type and "appointment_type_id" in CalendarEvent._fields:
-            values["appointment_type_id"] = appointment_type.id
-
-        if "appointment_booker_id" in CalendarEvent._fields and partner:
-            values["appointment_booker_id"] = partner.id
-
-        return values
+        duration_hours = getattr(appointment_type, "appointment_duration", 0.0) or 0.0
+        return int(duration_hours * 60)
 
 
-    def _sync_odoo_calendar_event(self):
-        CalendarEvent = self.env["calendar.event"].sudo()
+    @api.model
+    def _is_slot_available(self, appointment_type, provider, start_dt, duration=False, exclude_booking=False):
+        if not appointment_type or not provider or not start_dt:
+            return False
 
-        for booking in self:
-            if booking.state == "cancelled":
-                booking._cancel_odoo_calendar_event()
-                continue
+        duration_minutes = duration or int((appointment_type.appointment_duration or 0.0) * 60) or 60
+        end_dt = start_dt + timedelta(minutes=duration_minutes)
 
-            if not booking.start_datetime or not booking.end_datetime:
-                continue
+        if provider not in appointment_type.provider_ids:
+            return False
 
-            values = booking._odoo_calendar_event_values()
+        overlap_count = self.sudo().search_count(
+            self._get_overlapping_booking_domain(
+                provider,
+                start_dt,
+                end_dt,
+                exclude_booking=exclude_booking,
+            )
+        )
 
-            if booking.calendar_event_id:
-                booking.calendar_event_id.sudo().write(values)
-            else:
-                event = CalendarEvent.create(values)
-                booking.with_context(skip_odoo_calendar_sync=True).sudo().write({
-                    "calendar_event_id": event.id,
-                })
+        return overlap_count == 0
 
-            # Link resource via booking line after event exists
-            if booking.provider_id and booking.provider_id.resource_id and booking.calendar_event_id:
-                event = booking.calendar_event_id.sudo()
-                BookingLine = self.env['appointment.booking.line'].sudo()
-                existing = BookingLine.search([
-                    ('calendar_event_id', '=', event.id),
-                    ('appointment_resource_id', '=', booking.provider_id.resource_id.id),
-                ], limit=1)
-                if not existing:
-                    BookingLine.create({
-                        'calendar_event_id': event.id,
-                        'appointment_resource_id': booking.provider_id.resource_id.id,
-                        'capacity_reserved': 1,
-                    })
+    @api.model
+    def _get_overlapping_booking_domain(self, provider, start_dt, end_dt, exclude_booking=False):
+        domain = [
+            ("provider_id", "=", provider.id),
+            ("start", "<", end_dt),
+            ("stop", ">", start_dt),
+            ("state", "=", "reserved"),
+            ("appointment_type_id", "!=", False),
+        ]
 
+        if exclude_booking:
+            domain.append(("id", "!=", exclude_booking.id))
 
-    def _cancel_odoo_calendar_event(self):
-        for booking in self.filtered("calendar_event_id"):
-            event = booking.calendar_event_id.sudo()
-
-            if "active" in event._fields:
-                event.write({"active": False})
-            else:
-                event.unlink()
-                booking.with_context(skip_odoo_calendar_sync=True).sudo().write({
-                    "calendar_event_id": False,
-                })
-
-
-    def action_view_odoo_calendar_event(self):
-        self.ensure_one()
-
-        if not self.calendar_event_id:
-            raise UserError(_("No Odoo calendar event is linked to this booking."))
-
-        return {
-            "type": "ir.actions.act_window",
-            "name": "Odoo Appointment",
-            "res_model": "calendar.event",
-            "res_id": self.calendar_event_id.id,
-            "view_mode": "form",
-            "target": "current",
-        }
+        return domain
 
     @api.constrains("start_datetime", "end_datetime")
     def _check_datetime_range(self):
@@ -391,36 +294,6 @@ class ChaitanyaAppointmentBooking(models.Model):
         }
 
 
-
-    @api.model
-    def _get_overlapping_booking_domain(self, provider, start_dt, end_dt, exclude_booking=False):
-        domain = [
-            ("provider_id", "=", provider.id),
-            ("start_datetime", "<", end_dt),
-            ("end_datetime", ">", start_dt),
-            ("state", "=", "reserved"),
-        ]
-
-        if exclude_booking:
-            domain.append(("id", "!=", exclude_booking.id))
-
-        return domain
-
-    @api.model
-    def _is_slot_available(self, service, provider, start_dt, exclude_booking=False):
-        if not service or not provider or not start_dt:
-            return False
-
-        end_dt = start_dt + timedelta(minutes=service.duration)
-
-        if provider not in service.provider_ids:
-            return False
-
-        overlap_count = self.sudo().search_count(
-            self._get_overlapping_booking_domain(provider, start_dt, end_dt, exclude_booking)
-        )
-
-        return overlap_count == 0
 
     @api.model
     def prepare_amounts(self, service, voucher=False, partner=False):
@@ -745,4 +618,16 @@ class ChaitanyaAppointmentBooking(models.Model):
                 order.unlink()
 
         return result
+
+
+
+
+
+
+
+
+
+
+
+
 

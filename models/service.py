@@ -1,17 +1,28 @@
 
-from odoo import api, fields, models
-
+from odoo import models, fields, api
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
     is_booking_service = fields.Boolean(string="Is a Booking Service", default=False)
-    appointment_service_id = fields.Many2one(
+    appointment_type_id = fields.Many2one(
         "chaitanya.appointment.service",
         string="Related Service",
         ondelete="set null",
     )
     allow_gift = fields.Boolean(string="Allow as Gift", default=True)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class ChaitanyaAppointmentService(models.Model):
@@ -565,6 +576,11 @@ class ChaitanyaServiceAttributeLine(models.Model):
     service_id = fields.Many2one(
         "chaitanya.appointment.service",
         required=True,
+        ondelete="cascade",
+    )
+
+    appointment_type_id = fields.Many2one(  # add this
+        "appointment.type",
         ondelete="cascade",
     )
 

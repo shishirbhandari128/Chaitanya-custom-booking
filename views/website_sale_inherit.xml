@@ -1,37 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Booking buttons: only for booking service products -->
-    <!-- Booking buttons: only for booking service products -->
     <record id="product_booking_buttons" model="ir.ui.view">
         <field name="name">product.booking.buttons</field>
         <field name="inherit_id" ref="website_sale.product"/>
         <field name="priority">90</field>
         <field name="arch" type="xml">
 
-            <!-- Insert booking buttons before default add-to-cart block -->
             <xpath expr="//div[@id='add_to_cart_wrap']" position="before">
-                <t t-if="product.is_booking_service and product.sudo().appointment_service_id">
-                    <t t-set="booking_service" t-value="product.sudo().appointment_service_id"/>
+                <t t-if="product.is_booking_service and product.sudo().appointment_type_id">
+                    <t t-set="booking_service" t-value="product.sudo().appointment_type_id"/>
 
                     <div id="booking_service_actions_block"
-                        class="d-flex flex-column align-items-start w-100 mb-3">
+                         class="d-flex flex-column align-items-start w-100 mb-3">
 
                         <div id="booking_actions_wrap"
-                            class="d-flex align-items-center gap-2 mb-3">
+                             class="d-flex align-items-center gap-2 mb-3">
 
                             <a role="button"
-                            id="custom_book_now_button"
-                            class="btn btn-primary"
-                            t-attf-href="/booking/start/#{booking_service.id}?gift=0&amp;product_id=#{product.id}">
+                               id="custom_book_now_button"
+                               class="btn btn-primary"
+                               t-attf-href="/booking/start/#{booking_service.id}?gift=0&amp;product_id=#{product.id}">
                                 Book Now
                             </a>
 
                             <t t-if="product.allow_gift">
                                 <a role="button"
-                                id="gift_now_button"
-                                class="btn btn-outline-primary"
-                                t-attf-href="/booking/start/#{booking_service.id}?gift=1&amp;product_id=#{product.id}">
+                                   id="gift_now_button"
+                                   class="btn btn-outline-primary"
+                                   t-attf-href="/booking/start/#{booking_service.id}?gift=1&amp;product_id=#{product.id}">
                                     <i class="fa fa-gift me-1"/>
                                     Gift Now
                                 </a>
@@ -45,7 +42,7 @@
                             <div class="ch-product-duration-info">
                                 <strong>Duration</strong>
                                 <span>
-                                    <t t-out="booking_service.duration"/> min
+                                    <t t-out="int((booking_service.appointment_duration or 0.0) * 60)"/> min
                                 </span>
                             </div>
                         </t>
@@ -54,7 +51,6 @@
                 </t>
             </xpath>
 
-            <!-- Keep default Add to Cart only for normal products -->
             <xpath expr="//div[@id='add_to_cart_wrap']" position="attributes">
                 <attribute name="t-if">not product.is_booking_service</attribute>
             </xpath>
@@ -62,8 +58,6 @@
         </field>
     </record>
 
-
-    <!-- Hide quantity counter for booking service products -->
     <record id="hide_booking_product_quantity_counter" model="ir.ui.view">
         <field name="name">hide.booking.product.quantity.counter</field>
         <field name="inherit_id" ref="website_sale.product_quantity"/>

@@ -24,7 +24,7 @@ class ChaitanyaAppointmentProvider(models.Model):
     image = fields.Binary(attachment=True)
     specialization = fields.Char(translate=True)
     specialty_ids = fields.Many2many(
-        "chaitanya.appointment.service.category",
+        "product.public.category",
         "ch_appt_provider_category_rel",
         "provider_id",
         "category_id",
@@ -33,7 +33,7 @@ class ChaitanyaAppointmentProvider(models.Model):
     bio = fields.Html(translate=True)
     description = fields.Html(translate=True)
     service_ids = fields.Many2many(
-        "chaitanya.appointment.service",
+        "appointment.type",
         "chaitanya_appointment_provider_service_rel",
         "provider_id",
         "service_id",
@@ -49,7 +49,7 @@ class ChaitanyaAppointmentProvider(models.Model):
     is_active_for_booking = fields.Boolean(default=True)
     active = fields.Boolean(default=True)
     booking_ids = fields.One2many(
-        "chaitanya.appointment.booking",
+        "calendar.event",
         "provider_id",
         string="Bookings"
     )
@@ -81,7 +81,7 @@ class ChaitanyaAppointmentProvider(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        old_services = self.service_ids if 'service_ids' in vals else self.env['chaitanya.appointment.service']
+        old_services = self.service_ids if 'service_ids' in vals else self.env['appointment.type']
         result = super().write(vals)
 
         if 'service_ids' in vals:
@@ -114,7 +114,7 @@ class ChaitanyaAppointmentProvider(models.Model):
         return result
 
 
-    @api.depends('booking_ids.state', 'booking_ids.start_datetime')
+    @api.depends("booking_ids.state", "booking_ids.start")
     def _compute_booking_counts(self):
         now = fields.Datetime.now()
         start_day = now.replace(hour=0, minute=0, second=0)
@@ -126,19 +126,19 @@ class ChaitanyaAppointmentProvider(models.Model):
             provider.total_booking_count = len(bookings)
 
             provider.today_booking_count = len(bookings.filtered(
-                lambda b: start_day <= b.start_datetime < start_day + timedelta(days=1)
+                lambda b: start_day <= b.start < start_day + timedelta(days=1)
             ))
 
             provider.future_booking_count = len(bookings.filtered(
-                lambda b: b.start_datetime >= tomorrow
+                lambda b: b.start >= tomorrow
             ))
-
+            
     def action_view_bookings(self):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
             "name": "All Bookings",
-            "res_model": "chaitanya.appointment.booking",
+            "res_model": "calendar.event",
             "view_mode": "list,form",
             "domain": [("provider_id", "=", self.id)],
         }
@@ -151,12 +151,12 @@ class ChaitanyaAppointmentProvider(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Today's Bookings",
-            "res_model": "chaitanya.appointment.booking",
+            "res_model": "calendar.event",
             "view_mode": "list,form",
             "domain": [
                 ("provider_id", "=", self.id),
-                ("start_datetime", ">=", str(today) + " 00:00:00"),
-                ("start_datetime", "<", str(today) + " 23:59:59"),
+                ("start", ">=", str(today) + " 00:00:00"),
+                ("stop", "<", str(today) + " 23:59:59"),
             ],
     }
 
@@ -168,7 +168,7 @@ class ChaitanyaAppointmentProvider(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Future Bookings",
-            "res_model": "chaitanya.appointment.booking",
+            "res_model": "calendar.event",
             "view_mode": "list,form",
             "domain": [
                 ("provider_id", "=", self.id),

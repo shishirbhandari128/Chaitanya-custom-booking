@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from odoo import _, fields, models
 from odoo.exceptions import UserError
 
@@ -5,9 +7,18 @@ from odoo.exceptions import UserError
 class SaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
-    booking_id = fields.Many2one("chaitanya.appointment.booking", string="Booking", copy=False)
+    booking_id = fields.Many2one(
+        "calendar.event",
+        string="Booking",
+        copy=False,
+    )
 
-    chaitanya_service_id = fields.Many2one("chaitanya.appointment.service", copy=False)
+    chaitanya_service_id = fields.Many2one(
+        "appointment.type",
+        string="Service",
+        copy=False,
+    )
+
     chaitanya_duration = fields.Integer(string="Booking Duration (Minutes)", copy=False)
     chaitanya_provider_id = fields.Many2one("chaitanya.appointment.provider", copy=False)
     chaitanya_start_datetime = fields.Datetime(copy=False)
@@ -27,7 +38,7 @@ class SaleOrderLine(models.Model):
     chaitanya_gift_recipient_address = fields.Text(copy=False)
     chaitanya_gift_message = fields.Text(copy=False)
 
-    chaitanya_voucher_id = fields.Many2one("chaitanya.appointment.voucher", copy=False)
+    chaitanya_voucher_id = fields.Many2one("loyalty.card", copy=False)
     chaitanya_notes = fields.Text(copy=False)
 
 
@@ -54,6 +65,10 @@ class SaleOrder(models.Model):
             return "paid"
 
         return "pending"
+
+    def _get_chaitanya_booking_duration_minutes(self, line):
+        service = line.chaitanya_service_id
+        return line.chaitanya_duration or int((service.appointment_duration or 0.0) * 60)
 
     def _get_chaitanya_booking_line_amounts(self, booking_lines):
         self.ensure_one()
@@ -105,7 +120,7 @@ class SaleOrder(models.Model):
         return amounts_by_line
 
     def _create_chaitanya_bookings_from_order(self):
-        Booking = self.env["chaitanya.appointment.booking"].sudo()
+        CalendarEvent = self.env["calendar.event"].sudo()
 
         for order in self:
             order._chaitanya_validate_booking_lines()
@@ -125,8 +140,17 @@ class SaleOrder(models.Model):
                 service = line.chaitanya_service_id
                 provider = line.chaitanya_provider_id
                 start_dt = line.chaitanya_start_datetime
+                duration_minutes = order._get_chaitanya_booking_duration_minutes(line)
+                stop_dt = line.chaitanya_end_datetime or (
+                    start_dt + timedelta(minutes=duration_minutes)
+                )
 
-                if not Booking._is_slot_available(service, provider, start_dt):
+                if not CalendarEvent._is_slot_available(
+                    service,
+                    provider,
+                    start_dt,
+                    duration=duration_minutes,
+                ):
                     raise UserError(
                         _("The selected appointment slot for %s is no longer available.")
                         % service.name
@@ -138,18 +162,24 @@ class SaleOrder(models.Model):
                     "final_amount": line.price_subtotal,
                 })
 
-                booking = Booking.create({
-                    "service_id": service.id,
+                event = CalendarEvent.create({
+                    "name": "%s - %s" % (
+                        line.product_id.display_name or service.name,
+                        order.partner_id.name or "",
+                    ),
+                    "start": start_dt,
+                    "stop": stop_dt,
+                    "duration": duration_minutes,
+                    "appointment_type_id": service.id,
+                    "provider_id": provider.id,
+                    "partner_ids": [(6, 0, order.partner_id.ids)],
+                    "appointment_booker_id": order.partner_id.id,
+                    "description": line.chaitanya_notes or "",
                     "product_id": line.product_id.id,
                     "product_variant_description": line.product_id.display_name,
-                    "provider_id": provider.id,
-                    "partner_id": order.partner_id.id,
                     "customer_name": order.partner_id.name,
                     "customer_email": order.partner_id.email,
                     "customer_phone": order.partner_id.phone or order.partner_id.mobile,
-                    "start_datetime": start_dt,
-                    "end_datetime": line.chaitanya_end_datetime,
-                    "duration": line.chaitanya_duration,    
                     "booking_method": line.chaitanya_booking_method or "availability",
                     "is_gift": line.chaitanya_is_gift,
                     "gift_delivery_type": line.chaitanya_gift_delivery_type,
@@ -160,25 +190,20 @@ class SaleOrder(models.Model):
                     "payment_method": payment_method,
                     "payment_status": payment_status,
                     "state": "reserved",
-                    "notes": line.chaitanya_notes,
                     "sale_order_id": order.id,
                     "sale_order_line_id": line.id,
+                    "currency_id": order.currency_id.id,
                     **amounts,
                 })
 
-                line.booking_id = booking.id
+                line.booking_id = event.id
 
         return True
-    
-    
-   
-
-    
 
     def _chaitanya_get_invalid_booking_lines(self):
         self.ensure_one()
 
-        Booking = self.env["chaitanya.appointment.booking"].sudo()
+        CalendarEvent = self.env["calendar.event"].sudo()
         invalid_lines = []
 
         booking_lines = self.order_line.sudo().filtered(
@@ -191,13 +216,14 @@ class SaleOrder(models.Model):
             service = line.chaitanya_service_id.sudo()
             provider = line.chaitanya_provider_id.sudo()
             start_dt = line.chaitanya_start_datetime
+            duration_minutes = self._get_chaitanya_booking_duration_minutes(line)
 
             reason = False
 
             if not service or not service.exists():
                 reason = _("The selected service no longer exists.")
 
-            elif not service.active or not service.website_published:
+            elif not service.active or not service.is_published:
                 reason = _("The selected service is no longer available.")
 
             elif not provider or not provider.exists():
@@ -212,10 +238,11 @@ class SaleOrder(models.Model):
             elif not start_dt:
                 reason = _("The booking time is missing.")
 
-            elif not Booking._is_slot_available(
+            elif not CalendarEvent._is_slot_available(
                 service,
                 provider,
                 start_dt,
+                duration=duration_minutes,
                 exclude_booking=line.booking_id.sudo() if line.booking_id else False,
             ):
                 reason = _("The selected time slot is no longer available.")
@@ -227,7 +254,6 @@ class SaleOrder(models.Model):
                 })
 
         return invalid_lines
-
 
     def _chaitanya_invalid_booking_message(self):
         self.ensure_one()
@@ -252,7 +278,6 @@ class SaleOrder(models.Model):
         message_lines.append(_("Please remove these items from your cart and choose another time."))
 
         return "\n".join(message_lines)
-
 
     def _chaitanya_validate_booking_lines(self):
         self.ensure_one()
@@ -283,5 +308,3 @@ class SaleOrder(models.Model):
             line_id=line_id,
             **kwargs
         )
-
-

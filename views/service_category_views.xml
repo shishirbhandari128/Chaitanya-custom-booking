@@ -1,5 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_product_public_category_list_chaitanya" model="ir.ui.view">
+        <field name="name">product.public.category.list.chaitanya</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="sequence"/>
+                <field name="website_published"/>
+                <field name="service_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_product_public_category_form_chaitanya" model="ir.ui.view">
+        <field name="name">product.public.category.form.chaitanya</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="website_published"/>
+                            <field name="service_count" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="image_1920" widget="image"/>
+                        </group>
+                    </group>
+                    <field name="description"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_chaitanya_service_category" model="ir.actions.act_window">
+        <field name="name">Service Categories</field>
+        <field name="res_model">product.public.category</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_product_public_category_list_chaitanya')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_product_public_category_form_chaitanya')}),
+        ]"/>
+    </record>
+</odoo>
+
+
+<!-- <?xml version="1.0" encoding="utf-8"?>
+<odoo>
     <record id="view_chaitanya_service_category_list" model="ir.ui.view">
         <field name="name">chaitanya.appointment.service.category.list</field>
         <field name="model">chaitanya.appointment.service.category</field>
@@ -43,4 +93,4 @@
         <field name="res_model">chaitanya.appointment.service.category</field>
         <field name="view_mode">list,form</field>
     </record>
-</odoo>
+</odoo> -->

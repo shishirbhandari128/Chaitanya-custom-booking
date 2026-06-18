@@ -32,10 +32,10 @@
                 action="action_chaitanya_service"
                 sequence="20"/>
 
-        <menuitem id="menu_chaitanya_booking_attributes"
+        <menuitem id="menu_chaitanya_booking_attributes" 
                 name="Create service variants"
                 parent="menu_chaitanya_booking_services_group"
-                action="action_chaitanya_service_attribute"
+                action="action_chaitanya_product_attribute"
                 sequence="20"/>
 
         
@@ -79,7 +79,7 @@
         <menuitem id="menu_chaitanya_booking_vouchers"
                 name="Vouchers"
                 parent="menu_chaitanya_booking_root"
-                action="action_chaitanya_voucher"
+                action="action_chaitanya_vouchers"
                 sequence="60"/>
 
 

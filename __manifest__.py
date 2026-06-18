@@ -16,6 +16,7 @@
         "account",
         "calendar",
         "appointment",
+        "loyalty",
     ],
     
     "data": [
