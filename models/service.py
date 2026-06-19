@@ -80,8 +80,8 @@ class ChaitanyaAppointmentService(models.Model):
 
     provider_ids = fields.Many2many(
         "chaitanya.appointment.provider",
-        "chaitanya_appointment_provider_service_rel",
-        "service_id",
+        "chaitanya_appointment_provider_type_rel",
+        "appointment_type_id",
         "provider_id",
         string="Therapists",
     )
@@ -96,6 +96,9 @@ class ChaitanyaAppointmentService(models.Model):
         readonly=True,
     )
 
+
+    
+
     @api.model_create_multi
     def create(self, vals_list):
         services = super().create(vals_list)
@@ -103,13 +106,65 @@ class ChaitanyaAppointmentService(models.Model):
         services._ensure_checkout_product()
         services.attribute_line_ids.sync_to_product_template()
 
-        services._ensure_odoo_appointment_type()
-        services._sync_odoo_appointment_type()
+        services._sync_native_provider_links()
 
         return services
 
+    def _sync_native_provider_links(self, old_providers_by_service=None):
+        for service in self:
+            if not service.odoo_appointment_type_id:
+                continue
+
+            apt = service.odoo_appointment_type_id.sudo()
+
+            if old_providers_by_service:
+                old_providers = old_providers_by_service.get(service.id, self.env["chaitanya.appointment.provider"])
+                new_providers = service.provider_ids
+                added = new_providers - old_providers
+                removed = old_providers - new_providers
+
+                for p in added:
+                    vals = {}
+                    if p.user_id:
+                        vals["staff_user_ids"] = [(4, p.user_id.id)]
+                    if p.resource_id:
+                        vals["resource_ids"] = [(4, p.resource_id.id)]
+                    if vals:
+                        apt.write(vals)
+
+                for p in removed:
+                    vals = {}
+                    if p.user_id:
+                        vals["staff_user_ids"] = [(3, p.user_id.id)]
+                    if p.resource_id:
+                        vals["resource_ids"] = [(3, p.resource_id.id)]
+                    if vals:
+                        apt.write(vals)
+            else:
+                # Full recompute (called from create)
+                users = service.provider_ids.mapped("user_id").filtered("active")
+                resources = service.provider_ids.mapped("resource_id").filtered("id")
+                apt.write({
+                    "staff_user_ids": [(6, 0, users.ids)],
+                    "resource_ids": [(6, 0, resources.ids)],
+                    "avatars_display": "show" if service.provider_ids else "hide",
+                })
+                
     def write(self, vals):
+        if self.env.context.get("skip_native_provider_sync"):
+            return super().write(vals)
+
+        old_providers_by_service = {}
+        if "provider_ids" in vals:
+            for service in self:
+                old_providers_by_service[service.id] = service.provider_ids
+
         result = super().write(vals)
+
+        if "provider_ids" in vals:
+            self.with_context(skip_native_provider_sync=True)._sync_native_provider_links(
+                old_providers_by_service
+            )
 
         if self.env.context.get("skip_checkout_product_sync"):
             return result
@@ -118,8 +173,8 @@ class ChaitanyaAppointmentService(models.Model):
             "name",
             "price",
             "category_id",
-            "image",
-            "website_published",
+            "image_1920",
+            "is_published",
             "active",
             "allow_gift",
         }
@@ -127,19 +182,6 @@ class ChaitanyaAppointmentService(models.Model):
         if sync_fields.intersection(vals):
             self._ensure_checkout_product()
             self._sync_checkout_product()
-        
-        if not self.env.context.get("skip_odoo_appointment_sync"):
-            appointment_sync_fields = {
-                "name",
-                "duration",
-                "image",
-                "provider_ids",
-                "active",
-            }
-
-            if appointment_sync_fields.intersection(vals):
-                self._ensure_odoo_appointment_type()
-                self._sync_odoo_appointment_type()
 
         return result
 

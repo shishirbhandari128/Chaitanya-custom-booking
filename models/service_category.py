@@ -10,7 +10,7 @@ class ProductPublicCategory(models.Model):
     service_count = fields.Integer(compute="_compute_service_count")
 
     def _compute_service_count(self):
-        grouped = self.env["chaitanya.appointment.service"].read_group(
+        grouped = self.env["appointment.type"].read_group(
             [("category_id", "in", self.ids)],
             ["category_id"],
             ["category_id"],

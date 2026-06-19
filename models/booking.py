@@ -236,10 +236,10 @@ class CalendarEvent(models.Model):
 
         return domain
 
-    @api.constrains("start_datetime", "end_datetime")
+    @api.constrains("start", "stop")
     def _check_datetime_range(self):
         for booking in self:
-            if booking.start_datetime and booking.end_datetime and booking.start_datetime >= booking.end_datetime:
+            if booking.start and booking.stop and booking.start >= booking.stop:
                 raise ValidationError(_("Booking end time must be after start time."))
 
     def action_cancel(self):
@@ -247,7 +247,7 @@ class CalendarEvent(models.Model):
             if booking.state == "cancelled":
                 continue
 
-            booking.write({"state": "cancelled"})
+            booking.write({"state": "cancelled", "active": False} if "active" in booking._fields else {"state": "cancelled"})
 
             order = booking.sale_order_id
             line = booking.sale_order_line_id
@@ -256,7 +256,6 @@ class CalendarEvent(models.Model):
                 line.sudo().unlink()
 
             booking._auto_cancel_sale_order_if_ready()
-            booking._cancel_odoo_calendar_event()
 
         return True
 
@@ -287,13 +286,11 @@ class CalendarEvent(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Related Order Bookings"),
-            "res_model": "chaitanya.appointment.booking",
+            "res_model": "calendar.event",
             "view_mode": "list,form",
             "domain": [("sale_order_id", "=", self.sale_order_id.id)],
             "context": {"default_sale_order_id": self.sale_order_id.id},
         }
-
-
 
     @api.model
     def prepare_amounts(self, service, voucher=False, partner=False):
@@ -309,16 +306,6 @@ class CalendarEvent(models.Model):
             "discount_amount": discount_amount,
             "final_amount": max(base_amount - discount_amount, 0.0),
         }
-
-    def _get_order_bookings(self):
-        self.ensure_one()
-
-        if not self.sale_order_id:
-            return self.env["chaitanya.appointment.booking"]
-
-        return self.search([
-            ("sale_order_id", "=", self.sale_order_id.id),
-        ])
 
 
     def _get_order_real_lines(self):
@@ -444,8 +431,16 @@ class CalendarEvent(models.Model):
 
     def _compute_order_booking_counts(self):
         for booking in self:
-            order_bookings = booking._get_order_bookings() if booking.sale_order_id else self.env["chaitanya.appointment.booking"]
-            non_booking_lines = booking._get_order_non_booking_lines() if booking.sale_order_id else self.env["sale.order.line"]
+            order_bookings = (
+                booking._get_order_bookings()
+                if booking.sale_order_id
+                else self.env["calendar.event"]
+            )
+            non_booking_lines = (
+                booking._get_order_non_booking_lines()
+                if booking.sale_order_id
+                else self.env["sale.order.line"]
+            )
 
             booking.related_order_booking_count = len(order_bookings)
             booking.related_order_cancelled_booking_count = len(
@@ -586,9 +581,10 @@ class CalendarEvent(models.Model):
         return True
 
     def unlink(self):
-        orders = self.mapped("sale_order_id")
+        booking_events = self.filtered(lambda event: event.sale_order_id or event.sale_order_line_id)
+        orders = booking_events.mapped("sale_order_id")
 
-        for booking in self:
+        for booking in booking_events:
             if booking.state != "cancelled":
                 raise UserError(_("You must cancel this booking before deleting it."))
 
@@ -601,13 +597,11 @@ class CalendarEvent(models.Model):
 
         result = super().unlink()
 
-        Booking = self.env["chaitanya.appointment.booking"].sudo()
-
         for order in orders.sudo():
             if not order.exists():
                 continue
 
-            remaining_bookings = Booking.search_count([
+            remaining_bookings = self.env["calendar.event"].sudo().search_count([
                 ("sale_order_id", "=", order.id),
             ])
 
@@ -618,7 +612,6 @@ class CalendarEvent(models.Model):
                 order.unlink()
 
         return result
-
 
 
 

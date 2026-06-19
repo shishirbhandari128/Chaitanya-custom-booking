@@ -9,7 +9,8 @@ class AccountMove(models.Model):
 
         if {"payment_state", "state"}.intersection(vals):
             sale_orders = self.mapped("invoice_line_ids.sale_line_ids.order_id")
-            bookings = self.env["chaitanya.appointment.booking"].sudo().search([
+
+            bookings = self.env["calendar.event"].sudo().search([
                 ("sale_order_id", "in", sale_orders.ids),
             ])
 

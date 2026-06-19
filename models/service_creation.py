@@ -80,7 +80,7 @@ class AppointmentType(models.Model):
         Result is always in minutes.
         """
         self.ensure_one()
-
+  
         for ptav in product_variant.product_template_attribute_value_ids:
             pav = ptav.product_attribute_value_id
             if pav.override_duration:
@@ -91,7 +91,23 @@ class AppointmentType(models.Model):
     # ------------------------------------------------------------------ #
     #  Checkout product sync                                               #
     # ------------------------------------------------------------------ #
+    def _sync_native_provider_links(self):
+        for service in self:
+            providers = service.provider_ids
 
+            user_ids = providers.mapped("user_id").ids
+            resource_ids = providers.mapped("resource_id").ids
+
+            service.with_context(
+                skip_native_provider_sync=True,
+                skip_checkout_product_sync=True,
+            ).sudo().write({
+                "staff_user_ids": [(6, 0, user_ids)],
+                "resource_ids": [(6, 0, resource_ids)],
+                "avatars_display": "show" if user_ids or resource_ids else "hide",
+            })
+    
+    
     def _checkout_product_values(self):
         self.ensure_one()
         ProductTemplate = self.env["product.template"].sudo()
@@ -150,7 +166,13 @@ class AppointmentType(models.Model):
                 })
 
     def write(self, vals):
+        if self.env.context.get("skip_native_provider_sync"):
+            return super().write(vals)
+
         result = super().write(vals)
+
+        if "provider_ids" in vals:
+            self._sync_native_provider_links()
 
         if self.env.context.get("skip_checkout_product_sync"):
             return result
@@ -175,7 +197,8 @@ class AppointmentType(models.Model):
     def create(self, vals_list):
         services = super().create(vals_list)
         services._ensure_checkout_product()
-        return services
+        services._sync_native_provider_links()
+        return services 
 
     def unlink(self):
         templates = self.mapped("product_tmpl_id").sudo()

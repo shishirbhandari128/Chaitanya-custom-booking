@@ -34,9 +34,9 @@ class ChaitanyaAppointmentProvider(models.Model):
     description = fields.Html(translate=True)
     service_ids = fields.Many2many(
         "appointment.type",
-        "chaitanya_appointment_provider_service_rel",
+        "chaitanya_appointment_provider_type_rel",
         "provider_id",
-        "service_id",
+        "appointment_type_id",
         string="Services",
     )
     weekly_template_ids = fields.One2many(
@@ -80,37 +80,82 @@ class ChaitanyaAppointmentProvider(models.Model):
 
         return super().create(vals_list)
 
+    def _sync_native_appointment_type_links(self, services):
+        for service in services:
+            providers = service.provider_ids
+
+            service.with_context(
+                skip_native_provider_sync=True,
+                skip_checkout_product_sync=True,
+            ).sudo().write({
+                "staff_user_ids": [(6, 0, providers.mapped("user_id").ids)],
+                "resource_ids": [(6, 0, providers.mapped("resource_id").ids)],
+                "avatars_display": "show" if providers else "hide",
+            })
+
+
     def write(self, vals):
-        old_services = self.service_ids if 'service_ids' in vals else self.env['appointment.type']
+        old_services_by_provider = {}
+
+        if "service_ids" in vals:
+            for provider in self:
+                old_services_by_provider[provider.id] = provider.service_ids
+
         result = super().write(vals)
 
-        if 'service_ids' in vals:
-            affected_services = (old_services | self.service_ids).filtered('odoo_appointment_type_id')
-            affected_services._sync_odoo_appointment_type()
+        if "service_ids" in vals:
+            services_to_sync = self.env["appointment.type"]
 
-        if 'active' in vals:
-            self.service_ids.filtered('odoo_appointment_type_id')._sync_odoo_appointment_type()
+            for provider in self:
+                old_services = old_services_by_provider.get(
+                    provider.id,
+                    self.env["appointment.type"],
+                )
+                services_to_sync |= old_services | provider.service_ids
+
+            self._sync_native_appointment_type_links(services_to_sync)
+
+        if "active" in vals:
             for provider in self:
                 if provider.user_id:
-                    provider.user_id.sudo().write({'active': vals['active']})
+                    provider.user_id.sudo().write({"active": vals["active"]})
                 if provider.resource_id:
-                    provider.resource_id.sudo().write({'active': vals['active']})
+                    provider.resource_id.sudo().write({"active": vals["active"]})
 
-        if 'name' in vals:
+        if "name" in vals:
             for provider in self:
-                if provider.resource_id:
-                    provider.resource_id.sudo().write({'name': vals['name']})
                 if provider.user_id:
-                    provider.user_id.sudo().write({'name': vals['name']})
+                    provider.user_id.sudo().write({"name": vals["name"]})
+                if provider.resource_id:
+                    provider.resource_id.sudo().write({"name": vals["name"]})
 
         return result
+        
 
     def unlink(self):
-        users = self.mapped('user_id').filtered(lambda u: u.active)
-        resources = self.mapped('resource_id')
+        services_to_sync = self.mapped("service_ids")
+
+        users = self.mapped("user_id").filtered(lambda u: u.active)
+        resources = self.mapped("resource_id")
+
         result = super().unlink()
+
+        if services_to_sync:
+            for service in services_to_sync:
+                providers = service.provider_ids
+
+                service.with_context(
+                    skip_native_provider_sync=True,
+                    skip_checkout_product_sync=True,
+                ).sudo().write({
+                    "staff_user_ids": [(6, 0, providers.mapped("user_id").ids)],
+                    "resource_ids": [(6, 0, providers.mapped("resource_id").ids)],
+                    "avatars_display": "show" if providers else "hide",
+                })
+
         resources.sudo().unlink()
         users.sudo().unlink()
+
         return result
 
 
@@ -172,6 +217,6 @@ class ChaitanyaAppointmentProvider(models.Model):
             "view_mode": "list,form",
             "domain": [
                 ("provider_id", "=", self.id),
-                ("start_datetime", ">=", tomorrow),
+                ("start", ">=", tomorrow),
             ],
         }
