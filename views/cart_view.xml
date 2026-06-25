@@ -3,9 +3,6 @@
               inherit_id="website_sale.cart_lines"
               name="Cart Booking Delete Button">
 
-              
-
-        <!-- Replace desktop Remove text with trash icon -->
         <xpath expr="//div[@name='o_wsale_cart_line_button_container']/a[contains(@class, 'js_delete_product')]"
                position="replace">
             <a href="#"
@@ -16,16 +13,15 @@
             </a>
         </xpath>
 
-        <!-- Replace mobile delete button too -->
-        <!-- <xpath expr="//div[@name='o_wsale_cart_line_button_container']/button[contains(@class, 'js_delete_product')]"
+        <xpath expr="//div[@name='o_wsale_cart_line_button_container']/button[contains(@class, 'js_delete_product')]"
                position="replace">
-            <a href="#"
-               class="js_delete_product ch-cart-delete-icon"
-               title="Remove from cart"
-               aria-label="Remove from cart">
-                <i class="fa fa-trash-o"/>
-            </a>
-        </xpath> -->
+        </xpath>
+
+        <!-- Hide visually but keep in DOM so js_delete_product can find .js_quantity -->
+        <xpath expr="//div[@name='website_sale_cart_line_quantity']"
+               position="attributes">
+            <attribute name="t-attf-style">#{('display:none;' if line.product_id.is_booking_service else '')}</attribute>
+        </xpath>
 
     </template>
 </odoo>

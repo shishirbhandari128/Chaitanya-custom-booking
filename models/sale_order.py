@@ -172,6 +172,7 @@ class SaleOrder(models.Model):
                     "duration": duration_minutes,
                     "appointment_type_id": service.id,
                     "provider_id": provider.id,
+                    "user_id": provider.user_id.id if provider.user_id else self.env.user.id,
                     "partner_ids": [(6, 0, order.partner_id.ids)],
                     "appointment_booker_id": order.partner_id.id,
                     "description": line.chaitanya_notes or "",

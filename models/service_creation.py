@@ -74,17 +74,27 @@ class AppointmentType(models.Model):
     # ------------------------------------------------------------------ #
 
     def _resolve_variant_duration(self, product_variant):
-        """
-        Returns override_duration from the selected product variant's
-        attribute values, or falls back to appointment_duration.
-        Result is always in minutes.
-        """
         self.ensure_one()
-  
+
+        if not product_variant:
+            return int((self.appointment_duration or 0.0) * 60) or 60
+
         for ptav in product_variant.product_template_attribute_value_ids:
             pav = ptav.product_attribute_value_id
+
             if pav.override_duration:
                 return pav.override_duration
+
+            text = " ".join(filter(None, [
+                pav.name or "",
+                ptav.name or "",
+                ptav.display_name or "",
+            ])).lower()
+
+            import re
+            match = re.search(r"(\d+)", text)
+            if match and ("min" in text or "minute" in text or "duration" in text):
+                return int(match.group(1))
 
         return int((self.appointment_duration or 0.0) * 60) or 60
 

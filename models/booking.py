@@ -187,7 +187,7 @@ class CalendarEvent(models.Model):
         if not self.sale_order_id:
             return self.env["calendar.event"]
 
-        return self.env["calendar.event"].search([
+        return self.env["calendar.event"].with_context(active_test=False).search([
             ("sale_order_id", "=", self.sale_order_id.id),
         ])
 
@@ -247,17 +247,34 @@ class CalendarEvent(models.Model):
             if booking.state == "cancelled":
                 continue
 
-            booking.write({"state": "cancelled", "active": False} if "active" in booking._fields else {"state": "cancelled"})
-
             order = booking.sale_order_id
             line = booking.sale_order_line_id
 
-            if order and line and order.state in ("draft", "sent"):
-                line.sudo().unlink()
+            # Cancel and archive the booking.
+            booking.write(
+                {"state": "cancelled", "active": False}
+                if "active" in booking._fields
+                else {"state": "cancelled"}
+            )
 
-            booking._auto_cancel_sale_order_if_ready()
+            # If this was the last active booking/order line, cancel the sale order.
+            if order and order.state not in ("cancel",):
+                blocking_lines = order.order_line.filtered(
+                    lambda sol: not sol.display_type
+                    and sol.id != line.id
+                    and not sol.booking_id
+                    and sol.price_subtotal > 0
+                    and not getattr(sol, "is_delivery", False)
+                )
 
-        return True
+                other_active_bookings = booking._get_order_bookings().filtered(
+                    lambda item: item.id != booking.id and item.state != "cancelled"
+                )
+
+                if not blocking_lines and not other_active_bookings:
+                    order.sudo()._action_cancel()
+
+            return True
 
     def action_cancel_entire_order(self):
         for booking in self:
@@ -581,38 +598,41 @@ class CalendarEvent(models.Model):
         return True
 
     def unlink(self):
-        booking_events = self.filtered(lambda event: event.sale_order_id or event.sale_order_line_id)
+        booking_events = self.with_context(active_test=False).filtered(
+            lambda event: event.sale_order_id or event.sale_order_line_id
+        )
         orders = booking_events.mapped("sale_order_id")
 
         for booking in booking_events:
             if booking.state != "cancelled":
-                raise UserError(_("You must cancel this booking before deleting it."))
+                raise UserError(_("Only cancelled bookings can be deleted."))
 
             order = booking.sale_order_id
 
-            if order and order.state not in ("draft", "sent", "cancel"):
+            if order and order.state != "cancel":
                 raise UserError(_(
                     "You can delete this booking only after the related sale order is cancelled."
                 ))
 
-        result = super().unlink()
+            if booking.sale_order_line_id and booking.sale_order_line_id.exists():
+                booking.sale_order_line_id.sudo().unlink()
+
+        result = super(CalendarEvent, self.with_context(active_test=False)).unlink()
 
         for order in orders.sudo():
             if not order.exists():
                 continue
 
-            remaining_bookings = self.env["calendar.event"].sudo().search_count([
+            remaining_bookings = self.env["calendar.event"].sudo().with_context(
+                active_test=False
+            ).search_count([
                 ("sale_order_id", "=", order.id),
             ])
 
-            if remaining_bookings:
-                continue
-
-            if order.state in ("draft", "sent", "cancel"):
+            if not remaining_bookings and order.state == "cancel":
                 order.unlink()
 
         return result
-
 
 
 

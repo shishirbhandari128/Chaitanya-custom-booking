@@ -35,6 +35,17 @@ class ChaitanyaAppointmentController(http.Controller):
     def _get_booking_duration(self, service, product=False):
         if product and hasattr(service, "_resolve_variant_duration"):
             duration = service._resolve_variant_duration(product)
+            _logger.warning(
+                "DURATION DEBUG | product_id=%s product=%s ptavs=%s override_durations=%s resolved_duration=%s service_default_min=%s",
+                product.id,
+                product.display_name,
+                [(ptav.id, ptav.product_attribute_value_id.name, getattr(ptav.product_attribute_value_id, 'override_duration', 'NO_FIELD'))
+                for ptav in product.product_template_attribute_value_ids],
+                [getattr(ptav.product_attribute_value_id, 'override_duration', 'NO_FIELD')
+                for ptav in product.product_template_attribute_value_ids],
+                duration,
+                int((service.appointment_duration or 0.0) * 60),
+            )
             if duration:
                 return duration
 
@@ -295,6 +306,21 @@ class ChaitanyaAppointmentController(http.Controller):
         _logger.warning("PROVIDER CARD DEBUG END | result=%s", result)
 
         return result
+
+    def _get_booking_product(self, service, product_id=False):
+        Product = request.env["product.product"].sudo()
+
+        product = service.product_id
+
+        if product_id:
+            selected_product = Product.browse(int(product_id))
+            if (
+                selected_product.exists()
+                and selected_product.product_tmpl_id.id == service.product_tmpl_id.id
+            ):
+                product = selected_product
+
+        return product
 
     # def _provider_card(self, service, provider, date_value=False):
     #     all_slots = []
@@ -632,6 +658,13 @@ class ChaitanyaAppointmentController(http.Controller):
             "chaitanya_gift_message": post.get("gift_message"),
             "chaitanya_notes": post.get("notes"),
         })
+        _logger.warning(
+            "SUBMIT DURATION DEBUG | posted_product_id=%s resolved_product=%s resolved_product_id=%s duration=%s",
+            post.get("product_id"),
+            product.display_name,
+            product.id,
+            duration,
+        )
 
         return request.redirect("/shop/cart")
 
